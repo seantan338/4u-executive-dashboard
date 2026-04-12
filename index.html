@@ -175,19 +175,30 @@ const PORTAL_CONFIG = [
     titleEn: "📊 Architecture & Project Dashboard",
     items: [
       {
+        // 1. 截图里的最早那个 ATS 静态大盘
         url: "sunrise_4u_dashboard.html",
         icon: "📈",
-        titleZh: "Sunrise 4U 进度总览", titleEn: "Sunrise 4U Status Dashboard",
-        descZh: "高管战情大屏：查看全渠道人才数据引擎的架构图、开发进度与下一步核心指令。",
-        descEn: "Executive Dashboard: View omnichannel ATS architecture, development progress, and next priority actions.",
-        badgeLabel: "Live POC", badgeColor: "rgba(16,185,129,0.15)", badgeTextColor: "var(--success)", badgeBorder: "rgba(16,185,129,0.25)"
+        titleZh: "Sunrise 4U 进度总览 (Static)", titleEn: "Sunrise 4U Status Dashboard",
+        descZh: "静态架构大屏：查看全渠道人才数据引擎的初始架构图与视觉化分布。",
+        descEn: "Static Architectural Overview of the omnichannel ATS.",
+        badgeLabel: "V1 Static", badgeColor: "rgba(100,116,139,0.15)", badgeTextColor: "#64748b", badgeBorder: "rgba(100,116,139,0.25)"
       },
       {
+        // 2. 带动态进度条的终极高管大屏
+        url: "4U Platform Executive Dashboard.html",
+        icon: "🔥",
+        titleZh: "4U 高管动态战情室 (Live)", titleEn: "4U Executive Live Dashboard",
+        descZh: "实时联动大屏：连接 Firebase，自动接收 n8n 蓝图传来的进度并动态展示。",
+        descEn: "Live synced dashboard listening to Firebase for automated progress tracking.",
+        badgeLabel: "Live Sync", badgeColor: "rgba(16,185,129,0.15)", badgeTextColor: "var(--success)", badgeBorder: "rgba(16,185,129,0.25)"
+      },
+      {
+        // 3. n8n 控制台 (数据发射源)
         url: "sunrise_n8n_workflow_master_plan.html",
         icon: "⚡",
-        titleZh: "n8n 自动化总蓝图", titleEn: "n8n Automation Master Plan",
-        descZh: "全局自动化节点监控：查看 15 个核心工作流的阶段、API 工具链与实时部署状态。",
-        descEn: "Global automation node monitor: View phases, API toolchains, and live status of 15 core workflows.",
+        titleZh: "n8n 自动化总蓝图 (Controller)", titleEn: "n8n Automation Master Plan",
+        descZh: "全局控制台：更改工作流状态，点击同步按钮瞬间推送到高管大屏。",
+        descEn: "Global controller. Sync progress to Firebase to update the Executive Dashboard.",
         badgeLabel: "System Base", badgeColor: "rgba(59,139,212,0.15)", badgeTextColor: "#3b82f6", badgeBorder: "rgba(59,139,212,0.25)"
       }
     ]
@@ -340,22 +351,6 @@ function renderPortal() {
   root.innerHTML = html;
 }
 
-// ── Auth check ──
-(function(){
-  const s = sessionStorage.getItem('sr_auth');
-  if(!s){ window.location.replace('login.html'); return; }
-  try{
-    const d = JSON.parse(s);
-    if(d.exp <= Date.now()){ sessionStorage.removeItem('sr_auth'); window.location.replace('login.html'); }
-  }catch(e){ window.location.replace('login.html'); }
-})();
-
-function logout(){
-  if(confirm('确定要登出吗？\nAre you sure you want to log out?')){
-    sessionStorage.removeItem('sr_auth');
-    window.location.replace('login.html');
-  }
-}
 
 const PROVIDERS = {
   anthropic:{name:'Claude',placeholder:'sk-ant-api03-…',docs:'https://console.anthropic.com/settings/keys',docsLabel:'获取 Anthropic Key →',
