@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sunrise Recruit — n8n Automation Master Plan</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f3;
+    --bg3: #efefec;
+    --text: #1a1a18;
+    --text2: #6b6b66;
+    --text3: #9c9a92;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --success-bg: #eaf3de; --success-text: #3b6d11;
+    --warning-bg: #faeeda; --warning-text: #854f0b;
+    --info-bg: #e6f1fb; --info-text: #185fa5;
+    --r: 8px; --rl: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c; --bg2: #272725; --bg3: #2e2e2b;
+      --text: #e8e6df; --text2: #a8a69e; --text3: #6b6966;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --success-bg: #173404; --success-text: #97c459;
+      --warning-bg: #412402; --warning-text: #ef9f27;
+      --info-bg: #042c53; --info-text: #85b7eb;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; padding: 24px 16px; }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  .header { margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start; }
+  .header h1 { font-size: 20px; font-weight: 600; color: var(--text); }
+  .header p { font-size: 13px; color: var(--text2); margin-top: 4px; }
+  
+  .sync-btn { background: #f97316; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .sync-btn:hover { background: #ea580c; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(249,115,22,0.3); }
+  .sync-btn:active { transform: translateY(0); }
+  .sync-btn:disabled { background: #6b6b66; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .tab { font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 0.5px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; transition: all .15s; font-family: inherit; }
+  .tab:hover { background: var(--bg2); }
+  .tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  .status-bar { display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .stat { background: var(--bg2); border-radius: var(--r); padding: 8px 16px; border: 0.5px solid var(--border); }
+  .stat-n { font-size: 22px; font-weight: 600; color: var(--text); }
+  .stat-l { font-size: 11px; color: var(--text2); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+
+  .card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--rl);
+    padding: 14px;
+    cursor: pointer;
+    transition: border-color .15s, transform .1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:hover { border-color: var(--border2); transform: translateY(-1px); }
+  .card.selected { border: 2px solid #185fa5; }
+
+  .card-accent { position: absolute; top: 0; left: 0; width: 3px; height: 100%; }
+  .card-inner { padding-left: 10px; }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; flex: 1; }
+
+  .badge { font-size: 10px; padding: 2px 7px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; font-weight: 500; }
+  .badge.live { background: var(--success-bg); color: var(--success-text); }
+  .badge.planned { background: var(--warning-bg); color: var(--warning-text); }
+  .badge.future { background: var(--bg2); color: var(--text3); border: 0.5px solid var(--border); }
+
+  .card-desc { font-size: 12px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+  .tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; background: var(--bg2); color: var(--text2); border: 0.5px solid var(--border); }
+  .meta { display: flex; gap: 12px; align-items: center; }
+  .meta-item { font-size: 11px; color: var(--text3); }
+  .meta-item strong { color: var(--text2); font-weight: 500; }
+  .phase-badge { margin-left: auto; font-size: 11px; font-weight: 600; }
+
+  .detail-panel {
+    margin-top: 1rem;
+    background: var(--bg2);
+    border-radius: var(--rl);
+    padding: 18px;
+    border: 0.5px solid var(--border);
+  }
+  .detail-panel h2 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .detail-sub { font-size: 12px; color: var(--text2); margin-bottom: 14px; }
+  .section-label { font-size: 10px; color: var(--text3); font-weight: 600; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 7px; }
+
+  .trigger-box { font-size: 12px; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--r); padding: 8px 12px; margin-bottom: 14px; color: var(--text); }
+
+  .flow-steps { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 14px; }
+  .flow-step { font-size: 11px; padding: 3px 8px; background: var(--bg); border: 0.5px solid var(--border2); border-radius: 4px; color: var(--text2); }
+  .flow-arrow { font-size: 10px; color: var(--text3); }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .detail-cell { background: var(--bg); border-radius: var(--r); padding: 10px 12px; border: 0.5px solid var(--border); }
+  .detail-cell label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 3px; font-weight: 600; }
+  .detail-cell span { font-size: 12px; color: var(--text); }
+
+  .close-btn { float: right; font-size: 12px; color: var(--text2); cursor: pointer; padding: 3px 8px; border-radius: 4px; border: 0.5px solid var(--border2); background: var(--bg); font-family: inherit; }
+  .close-btn:hover { background: var(--bg3); }
+
+  @media (max-width: 600px) {
+    .detail-grid { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; gap: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>Sunrise Recruit — n8n Automation Master Plan</h1>
+      <p>Malaysia + Singapore Employment Agency · 15 workflows across 3 phases</p>
+    </div>
+    <button id="syncButton" class="sync-btn">🚀 实时同步进度至高管大屏</button>
+  </div>
+
+  <div class="status-bar" id="statsBar"></div>
+  <div class="tabs" id="tabs"></div>
+
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:#3B8BD4"></div>Operations</div>
+    <div class="leg"><div class="leg-dot" style="background:#1D9E75"></div>Recruitment</div>
+    <div class="leg"><div class="leg-dot" style="background:#BA7517"></div>Sales/Lead</div>
+    <div class="leg"><div class="leg-dot" style="background:#D85A30"></div>Compliance</div>
+    <div class="leg"><div class="leg-dot" style="background:#D4537E"></div>Finance</div>
+    <div class="leg"><div class="leg-dot" style="background:#7F77DD"></div>Analytics/Support</div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div id="detail"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  // ⚠️ 架构师指令：在这里填入你 src/lib/firebase.ts 里面的真实配置！
+  const firebaseConfig = {
+    apiKey: "AIzaSyAulmCLERkMxm3jpohfdL0BZTEjLZ8svvA",
+    authDomain: "gen-lang-client-0473804256.firebaseapp.com",
+    projectId: "gen-lang-client-0473804256",
+    storageBucket: "gen-lang-client-0473804256.firebasestorage.app",
+    messagingSenderId: "1018738988620",
+    appId: "1:1018738988620:web:66088c9d3893ea174906e9"
+  };
+
+  let db;
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+  } catch(e) {
+    console.error("Firebase init failed. Please check config.", e);
+  }
+
+  // 绑定同步按钮事件
+  document.getElementById('syncButton').addEventListener('click', async () => {
+    if (!db) {
+        alert("Firebase 未配置！请在 HTML 源码底部填入你的 firebaseConfig。");
+        return;
+    }
+    
+    const btn = document.getElementById('syncButton');
+    btn.disabled = true;
+    btn.innerHTML = "⏳ 同步中 (Syncing)...";
+
+    // 核心算法：计算当前 Live 的比例
+    const liveCount = window.workflows.filter(w => w.status === 'live').length;
+    const totalCount = window.workflows.length;
+    const progressPercent = Math.round((liveCount / totalCount) * 100);
+
+    try {
+      // 强势写入公共指标集合
+      await setDoc(doc(db, 'system_metrics', 'project_progress'), { 
+          n8n_completion_rate: progressPercent,
+          n8n_live_count: liveCount,
+          last_updated: new Date().toISOString()
+      }, { merge: true });
+      
+      btn.innerHTML = "✅ 已同步至大屏！";
+      setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = "🚀 实时同步进度至高管大屏";
+      }, 3000);
+    } catch (error) {
+      console.error("Error writing to Firestore:", error);
+      alert("同步失败！请检查 Firebase 读写权限 (Rules)。");
+      btn.disabled = false;
+      btn.innerHTML = "❌ 同步失败";
+    }
+  });
+</script>
+
+<script>
+const DEPT_COLOR = {
+  'Operations': '#3B8BD4','Recruitment': '#1D9E75','Sales': '#BA7517',
+  'Compliance': '#D85A30','Finance': '#D4537E','Analytics': '#7F77DD','Support': '#7F77DD',
+};
+
+// 💡 如果你完成了某个流程，把 status 从 'planned' 改成 'live' 即可！
+window.workflows = [
+  { id:1, phase:'P0', name:'SR Job Order Auto Entry', dept:'Operations', status:'live',
+    desc:'Telegram message → Gemini AI extracts job fields → appends row to Google Sheets Job Order 2026.',
+    trigger:'Telegram message (new job order text)',
+    nodes:['Telegram Trigger','AI Info Extractor (Gemini)','Split Out multi-jobs','Append to Google Sheets'],
+    tools:'Telegram Bot, Google Gemini, Google Sheets', cost:'MYR ~0 (free tier)', countries:'MY + SG',
+    tags:['Telegram','Gemini','Google Sheets','AI Extraction'] },
+  { id:2, phase:'P0', name:'Sunrise CV Automated Pipeline', dept:'Recruitment', status:'live',
+    desc:'Telegram CV upload → whitelist check → Gemini analysis → ATS Master Sheets → Google Docs CV card → send DOCX back to recruiter.',
+    trigger:'Telegram file upload (PDF/image CV)',
+    nodes:['Telegram Trigger','Whitelist check','Has Document? IF','Analyze doc (Gemini)','JS data transform','ATS Master Sheets','Copy file Drive','Create Sunrise CV Doc','Download & send DOCX'],
+    tools:'Telegram, Gemini, Google Sheets, Google Drive, Google Docs', cost:'MYR ~0 (free tier)', countries:'MY + SG',
+    tags:['CV Parsing','ATS','Google Drive','Gemini','DOCX'] },
+  { id:3, phase:'P0', name:'Unified Lead Capture & Dedup', dept:'Sales', status:'planned',
+    desc:'All inbound leads from WhatsApp, website, Facebook/IG, referrals land in one CRM. Auto-dedup by phone/email, MY/SG routing, SLA timer.',
+    trigger:'New inbound lead (form / WA / email / ads)',
+    nodes:['Parse contact + intent','Dedup by phone/email','Country route MY/SG','Auto-tag source','Create CRM record + task','Send acknowledgement WA/email'],
+    tools:'WhatsApp Cloud API, Meta Lead Ads, Google Forms, Gmail, HubSpot/Zoho', cost:'MYR 300–1500 + WA fees', countries:'MY + SG',
+    tags:['WhatsApp','CRM','Lead Routing','Meta Ads','Dedup'] },
+  { id:4, phase:'P0', name:'Auto Scheduling — Candidate & Client Calls', dept:'Operations', status:'planned',
+    desc:'Prospect self-books interviews. Auto-reminders T-24h & T-1h. No-show triggers reschedule prompt + task creation.',
+    trigger:"Lead stage = 'Call needed'",
+    nodes:['Offer Calendly link via WA/email','Confirm timezone MY/SG','Create Google Calendar event','Send reminders T-24h / T-1h','If no-show → reschedule prompt + task'],
+    tools:'Calendly, Google Calendar, WhatsApp API, Gmail, CRM', cost:'MYR 80–500', countries:'MY + SG',
+    tags:['Scheduling','Calendly','Google Calendar','Reminders','No-show'] },
+  { id:5, phase:'P0', name:'Candidate Onboarding Doc Pack', dept:'Recruitment', status:'planned',
+    desc:'Auto-collect IC, CV, certs, e-consent. OCR validation checks completeness. Stores to Drive with naming rules. Notifies recruiter.',
+    trigger:"Candidate stage → 'Onboarding'",
+    nodes:['Send checklist link','Upload + OCR extract','Validate completeness','Request missing docs auto','Store Google Drive (naming rules)','Update CRM stage + notify recruiter'],
+    tools:'Google Drive/Docs, Google Vision OCR, Dropbox Sign/DocuSign, CRM', cost:'MYR 300–2500', countries:'MY + SG',
+    tags:['OCR','e-Sign','Google Drive','Document Collection'] },
+  { id:6, phase:'P0', name:'Job Order Intake + Auto-Qualification', dept:'Sales', status:'planned',
+    desc:'Standardise client JD briefs. Validate salary, location, quota. AI scores deal urgency/budget/rarity. Routes to correct consultant.',
+    trigger:'Client requests hiring via form/WA',
+    nodes:['Send JD intake form (Jotform)','Validate salary / location / quota','AI score urgency + budget + rarity','Assign consultant owner','Generate proposal template','Update CRM pipeline'],
+    tools:'Jotform/Typeform, Gemini LLM, CRM, WhatsApp, Email', cost:'MYR 200–1500', countries:'MY + SG',
+    tags:['JD Intake','AI Scoring','CRM','Proposal'] },
+  { id:7, phase:'P0', name:'KYC / Employer Verification', dept:'Compliance', status:'planned',
+    desc:'Collect SSM, director ID, billing info. Optional sanctions check. Internal Ops/Finance approval flow. Stores audit log.',
+    trigger:'New employer account / new job order',
+    nodes:['Collect SSM + director ID + billing','Sanctions / PEP screening (optional)','Verify email domain + phone','Internal approval (Ops/Finance)','Set verified status in CRM','Store docs + audit log Drive'],
+    tools:'Google Drive, CRM, Email, WhatsApp, eSign', cost:'MYR 200–2000', countries:'MY + SG',
+    tags:['KYC','Employer Onboarding','Audit Log','Compliance'] },
+  { id:8, phase:'P0', name:'Quote + Contract Auto-Generation', dept:'Finance', status:'planned',
+    desc:"Pull client + role details. Choose perm/contract/retained template. Fill variables (fees, replacement window). Send for e-sign.",
+    trigger:"Deal stage = 'Proposal'",
+    nodes:['Pull client + role from CRM','Choose contract template','Fill variables: fees / replacement window','Send for e-sign (Dropbox Sign)','Update CRM stage + notify team'],
+    tools:'Google Docs templates, Dropbox Sign/DocuSign, CRM, Gmail', cost:'MYR 150–1200 + eSign seats', countries:'MY + SG',
+    tags:['Contract','e-Sign','Template','Fees'] },
+  { id:9, phase:'P0', name:'Client Status Updates (Auto-Controlled)', dept:'Operations', status:'planned',
+    desc:'Detect candidate stage changes. Compose short update via Gemini. Optional human approval. Send via WA/email. Log to CRM.',
+    trigger:'Candidate stage changes in CRM',
+    nodes:['Detect stage change','Compose update (Gemini draft)','Human-approve (optional)','Send via WA / email','Log communication in CRM'],
+    tools:'CRM, WhatsApp API, Gmail, Gemini LLM', cost:'MYR 100–800', countries:'MY + SG',
+    tags:['Status Update','WhatsApp','Client Comms','Gemini'] },
+  { id:10, phase:'P1', name:'Candidate-to-Job Matching + Shortlist Builder', dept:'Recruitment', status:'planned',
+    desc:'Embed/score candidates vs JD on skills, location, salary, availability. Generate ranked shortlist PDF and send to client.',
+    trigger:'New job order OR new candidate profile',
+    nodes:['Embed/score candidate vs JD','Produce top-N ranked list','Recruiter review screen (approve/reject)','Generate shortlist PDF/email','Log shortlist sent in CRM'],
+    tools:'CRM/ATS, Vector DB or scoring sheet, Gemini LLM, Google Docs PDF', cost:'MYR 500–6000', countries:'MY + SG',
+    tags:['AI Matching','Shortlist','Vector DB','PDF','ATS'] },
+  { id:11, phase:'P1', name:'Interview Coordination + Scorecards', dept:'Operations', status:'planned',
+    desc:'Propose interview slots. Confirm. Send calendar invites. Distribute feedback scorecard form to panel. Aggregate and move stage.',
+    trigger:'Interview stage reached in CRM',
+    nodes:['Propose available slots','Confirm slot (WA/email)','Send calendar invites','Scorecard form to panel','Aggregate feedback','Move stage + notify all parties'],
+    tools:'Google Calendar, Google Forms, CRM, WhatsApp, Gmail', cost:'MYR 150–1200', countries:'MY + SG',
+    tags:['Interview','Scorecard','Scheduling','Calendar'] },
+  { id:12, phase:'P1', name:'SG Work Pass / Visa Checklist (EP/SP/WP)', dept:'Compliance', status:'planned',
+    desc:'Determine SG pass type. Request docs in sequence. Validate completeness. Auto-reminders until complete. Store + audit log.',
+    trigger:'Candidate selected for SG placement',
+    nodes:['Determine EP / SP / WP checklist','Request docs in sequence (WA)','Validate completeness','Reminders until complete','Store + log in Drive / CRM'],
+    tools:'CRM, Google Drive, OCR, WhatsApp, MOM API (optional)', cost:'MYR 200–2500', countries:'SG Focus',
+    tags:['Singapore','Work Pass','EP','SP','WP','Compliance'] },
+  { id:13, phase:'P2', name:'Revenue + Consultant KPI Dashboard', dept:'Analytics', status:'future',
+    desc:'Daily/weekly extract CRM data. Compute placements, time-to-fill, source quality, consultant revenue. Alerts for SLA breaches.',
+    trigger:'Daily/weekly schedule (cron)',
+    nodes:['Extract CRM pipeline data','Clean + dedup records','Compute KPIs (placements, TTF, revenue)','Alerts for SLA breaches','Send weekly report email + WhatsApp'],
+    tools:'CRM API, Google Sheets/BigQuery, Looker Studio/Power BI', cost:'MYR 0–2000', countries:'MY + SG',
+    tags:['Dashboard','KPI','Analytics','BigQuery','Looker'] },
+  { id:14, phase:'P2', name:'AI Recruiter Copilot (Internal Chatbot)', dept:'Support', status:'future',
+    desc:'Recruiter asks "Where is this candidate?" → Gemini retrieves CRM context, drafts outreach, summarises calls, proposes next steps.',
+    trigger:'Recruiter request in Telegram/chat UI',
+    nodes:['Retrieve candidate context from CRM','Retrieve job order context','Generate answer / draft (Gemini)','Optional approval gate','Log action in CRM'],
+    tools:'Gemini / Claude LLM, CRM/ATS API, Telegram Bot, Firebase', cost:'MYR 500–8000', countries:'MY + SG',
+    tags:['AI Copilot','Chatbot','Recruiter Tool','Gemini','CRM'] },
+  { id:15, phase:'P2', name:'4U Employer Dashboard + Token Payment', dept:'Sales', status:'future',
+    desc:'React/Vite employer portal. Job vacancy posting. Token deduction per shortlist view. Candidate preview cards. Firebase Auth.',
+    trigger:'Employer action in web app',
+    nodes:['Firebase Auth (employer login)','Post job vacancy','Token wallet deduction','Candidate preview unlock','Shortlist selection flow','n8n webhook ↔ Firebase sync'],
+    tools:'React Vite, Firebase Auth/Firestore, Zeabur CI/CD, n8n Webhook', cost:'MYR 200–500 infra', countries:'MY + SG',
+    tags:['React','Firebase','Token','Employer Portal','Zeabur'] },
+];
+
+const PHASES = ['All','P0 — Now (0–30d)','P1 — Next (30–90d)','P2 — Later (90–180d)'];
+const PHASE_MAP = {'All':null,'P0 — Now (0–30d)':'P0','P1 — Next (30–90d)':'P1','P2 — Later (90–180d)':'P2'};
+const STATUS_LABEL = {live:'✅ Live', planned:'🔜 Planned', future:'🔮 Future'};
+
+let activePhase = 'All', selectedId = null;
+
+function renderStats() {
+  const bar = document.getElementById('statsBar');
+  const live = window.workflows.filter(w=>w.status==='live').length;
+  const planned = window.workflows.filter(w=>w.status==='planned').length;
+  const future = window.workflows.filter(w=>w.status==='future').length;
+  bar.innerHTML = `
+    <div class="stat"><div class="stat-n">${window.workflows.length}</div><div class="stat-l">Total workflows</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--success-text)">${live}</div><div class="stat-l">Live now</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--warning-text)">${planned}</div><div class="stat-l">P0 to build</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--text3)">${future}</div><div class="stat-l">Future phases</div></div>
+  `;
+}
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = PHASES.map(p =>
+    `<button class="tab ${activePhase===p?'active':''}" onclick="setPhase('${p}')">${p}</button>`
+  ).join('');
+}
+
+window.setPhase = function(p) { activePhase=p; selectedId=null; renderTabs(); renderGrid(); renderDetail(); }
+
+function renderGrid() {
+  const pf = PHASE_MAP[activePhase];
+  const filtered = pf ? window.workflows.filter(w=>w.phase===pf) : window.workflows;
+  document.getElementById('grid').innerHTML = filtered.map(w => {
+    const color = DEPT_COLOR[w.dept]||'#888';
+    return `
+      <div class="card ${selectedId===w.id?'selected':''}" onclick="selectCard(${w.id})">
+        <div class="card-accent" style="background:${color}"></div>
+        <div class="card-inner">
+          <div class="card-top">
+            <div class="card-title">${w.name}</div>
+            <span class="badge ${w.status}">${STATUS_LABEL[w.status]}</span>
+          </div>
+          <div class="card-desc">${w.desc}</div>
+          <div class="tags">${w.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+          <div class="meta">
+            <div class="meta-item"><strong>${w.dept}</strong></div>
+            <div class="meta-item">${w.countries}</div>
+            <div class="phase-badge" style="color:${color}">${w.phase}</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.selectCard = function(id) {
+  selectedId = selectedId===id ? null : id;
+  renderGrid(); renderDetail();
+  if (selectedId) setTimeout(()=>document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
+
+function renderDetail() {
+  const el = document.getElementById('detail');
+  if (!selectedId) { el.innerHTML=''; return; }
+  const w = window.workflows.find(x=>x.id===selectedId);
+  if (!w) { el.innerHTML=''; return; }
+  const color = DEPT_COLOR[w.dept]||'#888';
+  el.innerHTML = `
+    <div class="detail-panel">
+      <button class="close-btn" onclick="selectCard(${w.id})">✕ close</button>
+      <h2>${w.name}</h2>
+      <div class="detail-sub">${w.dept} · ${w.countries} · ${STATUS_LABEL[w.status]}</div>
+      <div class="section-label">Trigger</div>
+      <div class="trigger-box">${w.trigger}</div>
+      <div class="section-label">Flow</div>
+      <div class="flow-steps">
+        ${w.nodes.map((n,i)=>`${i>0?'<span class="flow-arrow">→</span>':''}<span class="flow-step">${n}</span>`).join('')}
+      </div>
+      <div class="detail-grid">
+        <div class="detail-cell"><label>Tools & APIs</label><span>${w.tools}</span></div>
+        <div class="detail-cell"><label>Est. monthly cost</label><span>${w.cost}</span></div>
+        <div class="detail-cell"><label>Phase</label><span style="color:${color};font-weight:600">${w.phase}</span></div>
+        <div class="detail-cell"><label>Tags</label><span>${w.tags.join(', ')}</span></div>
+      </div>
+    </div>`;
+}
+
+renderStats(); renderTabs(); renderGrid(); renderDetail();
+</script>
+</body>
+</html>
