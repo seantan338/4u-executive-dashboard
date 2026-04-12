@@ -1,452 +1,506 @@
-<!--
-Selected Palette: "Energetic Sunrise" (Orange: #f97316, Slate: #0f172a, Sky: #0ea5e9, Emerald: #10b981, Amber: #f59e0b)
-Narrative Plan: 
-1. Executive Summary & Health Overview: Establish the phase (POC & Ingestion) and visualize the high-level health of the 4 core system pillars.
-2. Module Progress Breakdown: Detail the granular status of frontend, omnichannel, and automation modules to highlight achievements and bottlenecks.
-3. Omnichannel Ingestion Architecture: A visual representation of the data flow pipeline (Sources -> AI Brain -> Database).
-4. Priority Actions: Clear next steps for immediate business value.
-Visualization Choices:
-1. Overall Module Status -> Donut Chart -> Chart.js -> Shows composition of completed, in-progress, and planned modules. NO SVG.
-2. Core Health Overview -> Horizontal Bar Chart -> Chart.js -> Compares the completion/stability percentage of the 4 main system components. NO SVG.
-3. Omnichannel Architecture -> CSS Grid/Flex Flowchart -> Styled HTML/CSS -> Organizes the process flow from data capture to database. NO MERMAID JS. NO SVG.
-Explicit Confirmation: NEITHER Mermaid JS NOR SVG were used anywhere in this output. All icons are unicode characters and all charts are Canvas based.
--->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sunrise 4U Platform & ATS Data Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8fafc;
-            color: #0f172a;
-        }
-        .chart-container {
-            position: relative;
-            width: 100%;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            height: 300px;
-            max-height: 400px;
-        }
-        @media (min-width: 768px) {
-            .chart-container {
-                height: 350px;
-            }
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-        }
-        .gradient-text {
-            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .status-badge-green { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
-        .status-badge-yellow { background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
-        .status-badge-gray { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d0d14">
+<title>Sunrise Recruit — 内部工具</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0d14; --s1:#14141f; --s2:#1c1c2e; --s3:#242438;
+  --border:#2e2e48; --accent:#f97316; --accent2:#fb923c;
+  --glow:rgba(249,115,22,0.18); --success:#22c55e; --warn:#eab308;
+  --danger:#ef4444; --info:#3b82f6;
+  --text:#f0f0f8; --text2:#9494b0; --text3:#5a5a7a;
+  --r:16px; --r-sm:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif}
+body{overflow-x:hidden}
+
+.bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.12}
+.orb1{width:600px;height:600px;background:var(--accent);top:-200px;right:-100px;animation:drift1 18s ease-in-out infinite}
+.orb2{width:400px;height:400px;background:#6366f1;bottom:-100px;left:-100px;animation:drift2 22s ease-in-out infinite}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(-60px,40px)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,-30px)}}
+
+.wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:24px 20px 60px}
+.header{text-align:center;padding:40px 0 48px;animation:fadeUp 0.6s ease both;position:relative}
+.logo-badge{display:inline-flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--border);border-radius:40px;padding:8px 18px;margin-bottom:20px;cursor:pointer}
+.logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.logo-text{font-size:13px;font-weight:600;color:var(--text2);letter-spacing:0.5px}
+.header h1{font-size:clamp(28px,6vw,42px);font-weight:800;letter-spacing:-1px;line-height:1.1}
+.header h1 span{background:linear-gradient(135deg,var(--accent),#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{color:var(--text2);font-size:15px;margin-top:12px}
+.header-sub{color:var(--text3);font-size:13px;margin-top:6px}
+
+.api-bar{display:flex;align-items:center;justify-content:space-between;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 16px;margin-bottom:32px}
+.api-status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.api-dot{width:8px;height:8px;border-radius:50%;background:var(--danger)}
+.api-dot.ok{background:var(--success)}
+.api-btn{padding:6px 14px;background:var(--accent);border:none;border-radius:20px;color:#fff;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity 0.2s}
+.api-btn:hover{opacity:0.85}
+
+.section-label{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-bottom:14px;padding-left:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:36px}
+
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px;cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;text-decoration:none;display:block;animation:fadeUp 0.5s ease both}
+.card::before{content:'';position:absolute;inset:0;background:var(--glow);opacity:0;transition:opacity 0.25s;pointer-events:none}
+.card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.4)}
+.card:hover::before{opacity:1}
+.card-icon{font-size:32px;margin-bottom:12px;display:block}
+.card-title{font-size:15px;font-weight:700;margin-bottom:4px}
+.card-desc{font-size:12px;color:var(--text2);line-height:1.6}
+.card-badge{position:absolute;top:14px;right:14px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px}
+.card-arrow{position:absolute;bottom:16px;right:16px;color:var(--text3);font-size:18px;transition:transform 0.2s,color 0.2s}
+.card:hover .card-arrow{transform:translate(3px,-3px);color:var(--accent)}
+
+.footer{text-align:center;padding-top:20px;color:var(--text3);font-size:12px;border-top:1px solid var(--border)}
+
+/* Modal Styles preserved */
+.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.modal h3{font-size:16px;font-weight:700}
+.modal p{font-size:13px;color:var(--text2);line-height:1.6}
+.provider-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.ptab{padding:8px 14px;border-radius:30px;border:1px solid var(--border);background:var(--s2);color:var(--text2);cursor:pointer;font-size:13px;font-family:inherit;transition:all 0.2s;white-space:nowrap}
+.ptab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.input-group{display:flex;flex-direction:column;gap:6px}
+.input-group label{font-size:12px;color:var(--text2);font-weight:500}
+.input-group input,.input-group select{padding:10px 14px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;width:100%}
+.input-group input:focus,.input-group select:focus{border-color:var(--accent)}
+select option{background:var(--s2)}
+.modal-actions{display:flex;gap:8px}
+.btn{padding:10px 18px;border-radius:var(--r-sm);border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;flex:1;justify-content:center}
+.btn-secondary{background:var(--s2);color:var(--text);border:1px solid var(--border)}
+.key-status{font-size:11px;margin-top:4px}
+.key-ok{color:var(--success)}
+.key-missing{color:var(--warn)}
+.docs-link{font-size:12px;color:var(--accent);cursor:pointer;text-decoration:underline;margin-top:-4px}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.lang-toggle-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--s2);border:1px solid var(--border);border-radius:20px;color:var(--text2);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.lang-toggle-btn:hover{border-color:var(--accent);color:var(--accent)}
+</style>
 </head>
-<body class="antialiased pb-20">
+<body>
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+</div>
 
-    <nav class="sticky top-0 z-50 bg-slate-900 text-white shadow-xl border-b border-orange-500">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <span class="text-3xl font-bold text-orange-500">&#9650;</span>
-                <h1 class="text-xl font-bold tracking-tight">Sunrise 4U Platform <span class="text-slate-400 font-normal hidden md:inline">| ATS Data Engine</span></h1>
-            </div>
-            <div class="mt-2 sm:mt-0 text-sm font-medium px-4 py-1 bg-slate-800 rounded-full border border-slate-700 text-orange-400">
-                Phase 1: POC & Omnichannel Ingestion
-            </div>
-        </div>
-    </nav>
+<div class="wrap">
+  <div class="header">
+    <div class="logo-badge" onclick="adminTap()" title="Tap 5 times for Admin">
+      <div class="logo-dot"></div>
+      <span class="logo-text">SUNRISE RECRUIT · INTERNAL TOOLS</span>
+    </div>
+    <div style="position:absolute;top:20px;right:20px;display:flex;gap:8px;align-items:center">
+      <button class="lang-toggle-btn" id="lang-toggle-btn" onclick="toggleLang()">
+        <span class="flag" id="lang-flag">🇬🇧</span>
+        <span id="lang-label">EN</span>
+      </button>
+      <button onclick="logout()" style="padding:6px 14px;background:var(--s2);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:inherit;font-size:12px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor='var(--danger)';this.style.color='var(--danger)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'"><span data-zh="🚪 登出" data-en="🚪 Logout">🚪 登出</span></button>
+    </div>
+    <img src="data:image/webp;base64,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" alt="Sunrise Recruit" style="width:200px;height:auto;margin:0 auto 12px;display:block;filter:drop-shadow(0 4px 20px rgba(249,115,22,0.25))">
+    <h1 style="font-size:clamp(22px,5vw,32px)"><span data-zh="内部工具中心" data-en="Staff Toolkit">Staff Toolkit</span></h1>
+    <p data-zh="Sunrise Recruit 专属内部工具套件" data-en="Sunrise Recruit Internal Tool Suite">Sunrise Recruit Internal Tool Suite</p>
+    <div class="header-sub" data-zh="仅限内部员工使用" data-en="All tools are for internal use only">All tools are for internal use only</div>
+  </div>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10 space-y-12">
+  <div class="api-bar">
+    <div class="api-status">
+      <div class="api-dot" id="api-dot"></div>
+      <span id="api-label" data-zh="AI 未配置" data-en="AI Not Configured">AI Not Configured</span>
+    </div>
+    <button class="api-btn" id="admin-settings-btn" onclick="promptAdmin()" style="display:none">⚙️ Settings</button>
+  </div>
 
-        <header class="text-center space-y-4 max-w-4xl mx-auto">
-            <h2 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
-                Project Status <span class="gradient-text">Dashboard</span>
-            </h2>
-            <p class="text-lg text-slate-600 leading-relaxed">
-                A high-level architectural overview of our mission to build a centralized, AI-driven omnichannel ATS data lake. We are transforming scattered applicant data into a singular source of truth.
-            </p>
-            <div class="flex justify-center gap-4 text-sm mt-4 text-slate-500">
-                <span>&#128197; Updated: April 13, 2026</span>
-                <span>&#128100; Chief Technical Architect</span>
-            </div>
-        </header>
+  <div id="dynamic-portal-root"></div>
 
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="glass-card p-6 rounded-2xl md:col-span-1 border-t-4 border-t-orange-500 flex flex-col justify-center items-center text-center">
-                <div class="text-5xl mb-4">&#128142;</div>
-                <h3 class="text-xl font-bold text-slate-900 mb-2">Single Source of Truth</h3>
-                <p class="text-slate-600 text-sm">Automating data aggregation from WhatsApp, forms, and social platforms into Firestore.</p>
-            </div>
-            <div class="glass-card p-6 rounded-2xl md:col-span-1 border-t-4 border-t-sky-500 flex flex-col justify-center items-center text-center">
-                <div class="text-5xl mb-4">&#129416;</div>
-                <h3 class="text-xl font-bold text-slate-900 mb-2">AI Parsing Brain</h3>
-                <p class="text-slate-600 text-sm">Leveraging Gemini 1.5 Pro to extract structured tags from unstructured CVs and chats.</p>
-            </div>
-            <div class="glass-card p-6 rounded-2xl md:col-span-1 border-t-4 border-t-emerald-500 flex flex-col justify-center items-center text-center">
-                <div class="text-5xl mb-4">&#128260;</div>
-                <h3 class="text-xl font-bold text-slate-900 mb-2">4U Core Loop</h3>
-                <p class="text-slate-600 text-sm">Completing the operational cycle linking Admins, Recruiters, and Candidates flawlessly.</p>
-            </div>
-        </section>
+  <div class="footer">
+    <p data-zh="© 2025 Sunrise Recruit · 仅限内部使用" data-en="© 2025 Sunrise Recruit · Internal Use Only">© 2025 Sunrise Recruit · 仅限内部使用</p>
+    <p style="margin-top:6px" data-zh="所有数据存储在本地浏览器" data-en="All data stored locally in your browser">所有数据存储在本地浏览器</p>
+  </div>
+</div>
 
-        <section class="bg-white rounded-3xl shadow-lg p-8 border border-slate-100">
-            <div class="mb-8 max-w-3xl">
-                <h2 class="text-3xl font-bold text-slate-900 mb-4 flex items-center gap-3">
-                    <span class="text-sky-500">&#128202;</span> System Health Overview
-                </h2>
-                <p class="text-slate-600">
-                    This section illustrates the overarching stability and completion metrics across our core technological pillars. The foundational elements are robust, allowing us to pivot focus entirely onto the Omnichannel POC and Gemini AI integrations.
-                </p>
-            </div>
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 data-zh="⚙️ AI 设置" data-en="⚙️ AI Settings">⚙️ AI 设置</h3>
+    <p>设置 AI API Key，供所有 AI 工具共用。Key 存储在本地浏览器，不会上传服务器。</p>
+    <div class="input-group">
+      <label>AI 提供商 Provider</label>
+      <div class="provider-tabs">
+        <button class="ptab active" data-p="anthropic">🟣 Claude</button>
+        <button class="ptab" data-p="gemini">🔵 Gemini</button>
+        <button class="ptab" data-p="openai">🟢 OpenAI</button>
+      </div>
+    </div>
+    <div class="input-group">
+      <label id="key-label">API Key</label>
+      <input type="password" id="key-input" placeholder="sk-ant-api03-…">
+      <div class="key-status" id="key-status"></div>
+    </div>
+    <div class="input-group">
+      <label>模型 Model</label>
+      <select id="model-select"></select>
+    </div>
+    <div id="docs-link" class="docs-link"></div>
+    <div class="input-group" id="proxy-group">
+      <label>🔒 Proxy URL <span style="font-size:10px;color:var(--text3)">(管理员填写 Admin only)</span></label>
+      <input type="text" id="proxy-input" placeholder="https://your-proxy.zeabur.app">
+      <div style="font-size:11px;color:var(--text3);margin-top:2px" id="proxy-status"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveSettings()">💾 保存</button>
+    </div>
+  </div>
+</div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                <div class="flex flex-col h-full">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Core Pillars Readiness Score</h3>
-                    <div class="chart-container flex-grow">
-                        <canvas id="healthBarChart"></canvas>
-                    </div>
-                    <div class="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <p class="text-sm text-slate-600 text-center"><strong>Bar Chart:</strong> Compares readiness across 4 strategic pillars. Web and DB foundations are 100% stable, driving our current 50% POC phase for AI and Ingestion.</p>
-                    </div>
-                </div>
+<script>
+// ==========================================
+// 🚀 架构师核心配置区：以后加工具只改这里！
+// ==========================================
+const PORTAL_CONFIG = [
+  {
+    id: "dashboards",
+    titleZh: "📊 架构与项目大盘",
+    titleEn: "📊 Architecture & Project Dashboard",
+    items: [
+      {
+        url: "sunrise_4u_dashboard.html",
+        icon: "📈",
+        titleZh: "Sunrise 4U 进度总览", titleEn: "Sunrise 4U Status Dashboard",
+        descZh: "高管战情大屏：查看全渠道人才数据引擎的架构图、开发进度与下一步核心指令。",
+        descEn: "Executive Dashboard: View omnichannel ATS architecture, development progress, and next priority actions.",
+        badgeLabel: "Live POC", badgeColor: "rgba(16,185,129,0.15)", badgeTextColor: "var(--success)", badgeBorder: "rgba(16,185,129,0.25)"
+      },
+      {
+        url: "sunrise_n8n_workflow_master_plan.html",
+        icon: "⚡",
+        titleZh: "n8n 自动化总蓝图", titleEn: "n8n Automation Master Plan",
+        descZh: "全局自动化节点监控：查看 15 个核心工作流的阶段、API 工具链与实时部署状态。",
+        descEn: "Global automation node monitor: View phases, API toolchains, and live status of 15 core workflows.",
+        badgeLabel: "System Base", badgeColor: "rgba(59,139,212,0.15)", badgeTextColor: "#3b82f6", badgeBorder: "rgba(59,139,212,0.25)"
+      }
+    ]
+  },
+  {
+    id: "ai_tools",
+    titleZh: "🤖 AI 驱动工具",
+    titleEn: "🤖 AI-Powered Tools",
+    items: [
+      {
+        url: "jd-generator.html", icon: "📋",
+        titleZh: "JD 生成器", titleEn: "JD Generator",
+        descZh: "输入职位和要求，AI 自动生成专业中英文职位描述", descEn: "Enter role details, AI generates professional bilingual job descriptions",
+        badgeLabel: "AI", badgeColor: "rgba(249,115,22,0.15)", badgeTextColor: "var(--accent)", badgeBorder: "rgba(249,115,22,0.3)"
+      },
+      {
+        url: "cv-screener.html", icon: "📄",
+        titleZh: "CV 筛选评分", titleEn: "CV Screening",
+        descZh: "上传 CV，对照职位要求，AI 给出匹配分数和分析报告", descEn: "Upload CV, AI scores and analyses match against job requirements",
+        badgeLabel: "AI", badgeColor: "rgba(249,115,22,0.15)", badgeTextColor: "var(--accent)", badgeBorder: "rgba(249,115,22,0.3)"
+      },
+      {
+        url: "interview-gen.html", icon: "🎯",
+        titleZh: "面试问题生成器", titleEn: "Interview Questions",
+        descZh: "根据职位和 JD，生成结构化面试题库（技能/行为/情景）", descEn: "Generate structured question banks by role: technical, behavioral, situational",
+        badgeLabel: "AI", badgeColor: "rgba(249,115,22,0.15)", badgeTextColor: "var(--accent)", badgeBorder: "rgba(249,115,22,0.3)"
+      }
+    ]
+  },
+  {
+    id: "ops_tools",
+    titleZh: "⚙️ 运营工具",
+    titleEn: "⚙️ Operations Tools",
+    items: [
+      {
+        url: "whatsapp-templates.html", icon: "💬",
+        titleZh: "WhatsApp 模板库", titleEn: "WA Templates",
+        descZh: "分类存储常用消息模板，一键复制，支持变量替换", descEn: "Store message templates by category, one-tap copy with variable substitution",
+        badgeLabel: "Local", badgeColor: "rgba(34,197,94,0.12)", badgeTextColor: "var(--success)", badgeBorder: "rgba(34,197,94,0.25)"
+      },
+      {
+        url: "candidate-tracker.html", icon: "👥",
+        titleZh: "候选人追踪", titleEn: "Candidate Tracker",
+        descZh: "记录候选人状态，跟进提醒，简单高效的招聘流程管理", descEn: "Track candidate stages, follow-up reminders, simple pipeline management",
+        badgeLabel: "Local", badgeColor: "rgba(34,197,94,0.12)", badgeTextColor: "var(--success)", badgeBorder: "rgba(34,197,94,0.25)"
+      },
+      {
+        url: "quotation.html", icon: "💰",
+        titleZh: "报价单生成器", titleEn: "Quotation Generator",
+        descZh: "填入客户资料和职位信息，一键生成专业 PDF 报价单", descEn: "Fill in client details, generate professional PDF quotations instantly",
+        badgeLabel: "Local", badgeColor: "rgba(34,197,94,0.12)", badgeTextColor: "var(--success)", badgeBorder: "rgba(34,197,94,0.25)"
+      }
+    ]
+  },
+  {
+    id: "knowledge_admin",
+    titleZh: "📚 知识与管理",
+    titleEn: "📚 Knowledge & Admin",
+    items: [
+      {
+        url: "sop-library.html", icon: "📖",
+        titleZh: "SOP 知识库", titleEn: "SOP Library",
+        descZh: "存储公司流程、话术、FAQ，新人培训必备参考手册", descEn: "Store SOPs, scripts, FAQs — essential onboarding reference",
+        badgeLabel: "Local", badgeColor: "rgba(34,197,94,0.12)", badgeTextColor: "var(--success)", badgeBorder: "rgba(34,197,94,0.25)"
+      },
+      {
+        url: "attendance.html", icon: "🗓️",
+        titleZh: "考勤 & 排班", titleEn: "Attendance",
+        descZh: "员工签到记录，排班表管理，月度出勤统计一览", descEn: "Clock-in logs, shift scheduling, monthly attendance overview",
+        badgeLabel: "Local", badgeColor: "rgba(34,197,94,0.12)", badgeTextColor: "var(--success)", badgeBorder: "rgba(34,197,94,0.25)"
+      },
+      {
+        url: "scanner-app.html", icon: "📷",
+        titleZh: "ScanPro 扫描仪", titleEn: "ScanPro Scanner",
+        descZh: "拍照扫描文件，OCR 识别，导出 PDF，多格式图像增强", descEn: "Scan documents, OCR recognition, export PDF, image enhancement",
+        badgeLabel: "AI", badgeColor: "rgba(249,115,22,0.15)", badgeTextColor: "var(--accent)", badgeBorder: "rgba(249,115,22,0.3)"
+      }
+    ]
+  },
+  {
+    id: "n8n_bots",
+    titleZh: "⚡ 自动化 Telegram Bots",
+    titleEn: "⚡ Automation Telegram Bots",
+    items: [
+      {
+        url: "https://t.me/SR_AIcvBot", icon: "🤖",
+        titleZh: "上传候选人 CV", titleEn: "Upload Candidate CV",
+        descZh: "发送 PDF 到 Bot → 自动解析 → 存入 ATS Master → 生成标准 CV", descEn: "Send PDF to Bot → auto-parse → save to ATS Master → generate formatted CV",
+        badgeLabel: "n8n", badgeColor: "rgba(234,88,12,0.15)", badgeTextColor: "#ea580c", badgeBorder: "rgba(234,88,12,0.3)"
+      },
+      {
+        url: "https://t.me/SR_JobBot", icon: "🤖",
+        titleZh: "录入 Job Order", titleEn: "Submit Job Order",
+        descZh: "发送职位信息到 Bot → AI 自动提取结构化数据 → 存入 Job Order 2026", descEn: "Send job info to Bot → AI extracts structured data → saves to Job Order 2026",
+        badgeLabel: "n8n", badgeColor: "rgba(234,88,12,0.15)", badgeTextColor: "#ea580c", badgeBorder: "rgba(234,88,12,0.3)"
+      },
+      {
+        url: "https://docs.google.com/spreadsheets/d/1dnclhipxHMlKTy6IduCMoztG622pizsQxryFBjmSfVE", icon: "📊",
+        titleZh: "ATS Master Sheet", titleEn: "ATS Master Sheet",
+        descZh: "查看所有候选人完整档案、状态、顾问负责人", descEn: "View all candidate profiles, status and assigned consultant",
+        badgeLabel: "Data", badgeColor: "rgba(34,197,94,0.12)", badgeTextColor: "var(--success)", badgeBorder: "rgba(34,197,94,0.25)"
+      },
+      {
+        url: "https://docs.google.com/spreadsheets/d/1Fc3_q77r8Eph665aqqmeDqEalRjEFBDhIZ3-F2qxYt8", icon: "🗂️",
+        titleZh: "Job Order 2026", titleEn: "Job Order 2026",
+        descZh: "查看所有职位订单、状态、负责顾问", descEn: "View all job orders, status and assigned consultant",
+        badgeLabel: "Data", badgeColor: "rgba(34,197,94,0.12)", badgeTextColor: "var(--success)", badgeBorder: "rgba(34,197,94,0.25)"
+      }
+    ]
+  }
+];
 
-                <div class="flex flex-col h-full">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Module Status Distribution</h3>
-                    <div class="chart-container flex-grow">
-                        <canvas id="moduleDonutChart"></canvas>
-                    </div>
-                    <div class="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <p class="text-sm text-slate-600 text-center"><strong>Donut Chart:</strong> Displays the proportion of the 15 tracked sub-modules currently Stable (6), In Progress (6), or Planned (3).</p>
-                    </div>
-                </div>
-            </div>
-        </section>
+// ==========================================
+// 渲染逻辑
+// ==========================================
+function renderPortal() {
+  const root = document.getElementById('dynamic-portal-root');
+  let html = '';
 
-        <section class="glass-card rounded-3xl p-8">
-            <div class="mb-8">
-                <h2 class="text-3xl font-bold text-slate-900 mb-4 flex items-center gap-3">
-                    <span class="text-emerald-500">&#128296;</span> Granular Module Progress
-                </h2>
-                <p class="text-slate-600 max-w-3xl">
-                    A detailed breakdown of all functional modules within the 4U architecture. We categorize elements by frontend interfaces, data ingestion endpoints, and the central automation core.
-                </p>
-            </div>
+  PORTAL_CONFIG.forEach((section, index) => {
+    // Section Label
+    html += `<div class="section-label" data-zh="${section.titleZh}" data-en="${section.titleEn}">${currentLang === 'zh' ? section.titleZh : section.titleEn}</div>`;
+    
+    // Grid Container
+    html += `<div class="grid">`;
+    
+    // Cards
+    section.items.forEach((item, itemIdx) => {
+      // 动态生成样式
+      let cardStyle = '';
+      if (section.id === 'dashboards') {
+         if (itemIdx === 0) cardStyle = `border-color: rgba(249,115,22,0.5); box-shadow: 0 4px 20px rgba(249,115,22,0.05);`;
+         if (itemIdx === 1) cardStyle = `border-color: rgba(59,139,212,0.5); box-shadow: 0 4px 20px rgba(59,139,212,0.05);`;
+      }
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 class="font-bold text-xl text-slate-800 mb-4 border-b pb-2">1. Web Frontend Core</h3>
-                    <ul class="space-y-4">
-                        <li class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                            <span class="font-medium text-slate-700">Brand & Home Pages</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-green">Stable &#10003;</span>
-                        </li>
-                        <li class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                            <span class="font-medium text-slate-700">Role-based Auth (Login)</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-green">Stable &#10003;</span>
-                        </li>
-                        <li class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                            <span class="font-medium text-slate-700">Internal Tools Portal</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-green">Stable &#10003;</span>
-                        </li>
-                        <li class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                            <span class="font-medium text-slate-700">Contact / Inquiry</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-green">Stable &#10003;</span>
-                        </li>
-                        <li class="flex justify-between items-center p-3 bg-orange-50 border border-orange-100 rounded-lg">
-                            <span class="font-medium text-slate-700">Job Search Engine</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-yellow">In Progress &#9881;</span>
-                        </li>
-                        <li class="flex justify-between items-center p-3 bg-orange-50 border border-orange-100 rounded-lg">
-                            <span class="font-medium text-slate-700">Candidate Dashboard</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-yellow">In Progress &#9881;</span>
-                        </li>
-                        <li class="flex justify-between items-center p-3 bg-orange-50 border border-orange-100 rounded-lg">
-                            <span class="font-medium text-slate-700">Admin Control Center</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-yellow">In Progress &#9881;</span>
-                        </li>
-                    </ul>
-                </div>
+      html += `
+        <a class="card" href="${item.url}" style="${cardStyle}" ${item.url.startsWith('http') ? 'target="_blank"' : ''}>
+          <span class="card-icon">${item.icon}</span>
+          <div class="card-title" data-zh="${item.titleZh}" data-en="${item.titleEn}">${currentLang === 'zh' ? item.titleZh : item.titleEn}</div>
+          <div class="card-desc" data-zh="${item.descZh}" data-en="${item.descEn}">${currentLang === 'zh' ? item.descZh : item.descEn}</div>
+          <span class="card-badge" style="background:${item.badgeColor};color:${item.badgeTextColor};border:1px solid ${item.badgeBorder}" data-zh="${item.badgeLabel}" data-en="${item.badgeLabel}">${item.badgeLabel}</span>
+          <span class="card-arrow">↗</span>
+        </a>
+      `;
+    });
+    
+    html += `</div>`;
+  });
 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 class="font-bold text-xl text-slate-800 mb-4 border-b pb-2">2. Omnichannel Ingestion</h3>
-                    <ul class="space-y-4">
-                        <li class="flex justify-between items-start p-3 bg-orange-50 border border-orange-200 rounded-lg shadow-inner">
-                            <div>
-                                <span class="font-bold text-orange-700 block">WABA Webhook</span>
-                                <span class="text-xs text-slate-500">Priority Task: Node.js/Zeabur</span>
-                            </div>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-yellow mt-1">POC Phase &#9881;</span>
-                        </li>
-                        <li class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                            <span class="font-medium text-slate-700">QR Kiosk (iPad)</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-gray">Planned &#9201;</span>
-                        </li>
-                        <li class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                            <span class="font-medium text-slate-700">Web Chatbot</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-gray">Planned &#9201;</span>
-                        </li>
-                        <li class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                            <span class="font-medium text-slate-700">Social Scraper</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-gray">Planned &#9201;</span>
-                        </li>
-                    </ul>
-                </div>
+  root.innerHTML = html;
+}
 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 class="font-bold text-xl text-slate-800 mb-4 border-b pb-2">3. Automation & Data</h3>
-                    <ul class="space-y-4">
-                        <li class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                            <span class="font-medium text-slate-700">Firestore DB Core</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-green">Stable &#10003;</span>
-                        </li>
-                        <li class="flex justify-between items-start p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                            <div>
-                                <span class="font-bold text-slate-800 block">n8n Engine</span>
-                                <span class="text-xs text-slate-500">Zeabur deployment</span>
-                            </div>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-yellow mt-1">In Progress &#9881;</span>
-                        </li>
-                        <li class="flex justify-between items-start p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                            <div>
-                                <span class="font-bold text-slate-800 block">Gemini API Parser</span>
-                                <span class="text-xs text-slate-500">Unstructured to JSON</span>
-                            </div>
-                            <span class="px-2 py-1 text-xs font-bold rounded-full status-badge-yellow mt-1">POC Phase &#9881;</span>
-                        </li>
-                    </ul>
-                </div>
+// ── Auth check ──
+(function(){
+  const s = sessionStorage.getItem('sr_auth');
+  if(!s){ window.location.replace('login.html'); return; }
+  try{
+    const d = JSON.parse(s);
+    if(d.exp <= Date.now()){ sessionStorage.removeItem('sr_auth'); window.location.replace('login.html'); }
+  }catch(e){ window.location.replace('login.html'); }
+})();
 
-            </div>
-        </section>
+function logout(){
+  if(confirm('确定要登出吗？\nAre you sure you want to log out?')){
+    sessionStorage.removeItem('sr_auth');
+    window.location.replace('login.html');
+  }
+}
 
-        <section class="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 20% 150%, #f97316 0%, transparent 50%);"></div>
-            
-            <div class="mb-10 max-w-3xl relative z-10">
-                <h2 class="text-3xl font-bold mb-4 flex items-center gap-3 text-orange-400">
-                    <span>&#9874;</span> Omnichannel Architecture Flow
-                </h2>
-                <p class="text-slate-300">
-                    This structural flowchart demonstrates the automated trajectory of candidate data. By isolating collection nodes and routing them through a central AI parser, we ensure absolute consistency within our candidate schema, entirely replacing manual entry.
-                </p>
-            </div>
+const PROVIDERS = {
+  anthropic:{name:'Claude',placeholder:'sk-ant-api03-…',docs:'https://console.anthropic.com/settings/keys',docsLabel:'获取 Anthropic Key →',
+    models:[{v:'claude-sonnet-4-20250514',l:'Claude Sonnet 4 (推荐)'},{v:'claude-opus-4-5',l:'Claude Opus 4.5'},{v:'claude-haiku-4-5-20251001',l:'Claude Haiku 4.5'}]},
+  gemini:{name:'Gemini',placeholder:'AIza…',docs:'https://aistudio.google.com/app/apikey',docsLabel:'获取 Gemini Key →',
+    models:[{v:'gemini-2.5-flash-preview-04-17',l:'Gemini 2.5 Flash (推荐)'},{v:'gemini-2.0-flash-lite',l:'Gemini 2.0 Flash Lite'},{v:'gemini-2.5-pro-preview-03-25',l:'Gemini 2.5 Pro'},{v:'gemini-1.5-flash',l:'Gemini 1.5 Flash'}]},
+  openai:{name:'OpenAI',placeholder:'sk-proj-…',docs:'https://platform.openai.com/api-keys',docsLabel:'获取 OpenAI Key →',
+    models:[{v:'gpt-4o',l:'GPT-4o (推荐)'},{v:'gpt-4o-mini',l:'GPT-4o Mini'},{v:'gpt-4-turbo',l:'GPT-4 Turbo'}]}
+};
 
-            <div class="relative z-10 flex flex-col items-center max-w-4xl mx-auto space-y-4">
-                
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full text-center">
-                    <div class="bg-slate-800 border-2 border-slate-700 p-4 rounded-xl shadow-lg">
-                        <div class="text-3xl mb-2 text-green-400">&#9993;</div>
-                        <h4 class="font-bold text-sm">WhatsApp (WABA)</h4>
-                    </div>
-                    <div class="bg-slate-800 border-2 border-slate-700 p-4 rounded-xl shadow-lg opacity-60">
-                        <div class="text-3xl mb-2 text-blue-400">&#128241;</div>
-                        <h4 class="font-bold text-sm">QR Kiosk</h4>
-                    </div>
-                    <div class="bg-slate-800 border-2 border-slate-700 p-4 rounded-xl shadow-lg opacity-60">
-                        <div class="text-3xl mb-2 text-purple-400">&#129302;</div>
-                        <h4 class="font-bold text-sm">Web Chatbot</h4>
-                    </div>
-                    <div class="bg-slate-800 border-2 border-slate-700 p-4 rounded-xl shadow-lg opacity-60">
-                        <div class="text-3xl mb-2 text-sky-400">&#128375;</div>
-                        <h4 class="font-bold text-sm">Social Scraper</h4>
-                    </div>
-                </div>
+let curProvider = localStorage.getItem('sr_provider')||'anthropic';
 
-                <div class="text-4xl text-orange-500 animate-bounce py-2">&#8595;</div>
+const ADMIN_PW = 'sunrise2025';
+let adminTapCount = 0;
+let adminTapTimer = null;
+let isAdmin = sessionStorage.getItem('sr_admin') === '1';
 
-                <div class="w-full md:w-2/3 bg-gradient-to-r from-orange-600 to-orange-500 p-1 rounded-2xl shadow-[0_0_30px_rgba(249,115,22,0.3)]">
-                    <div class="bg-slate-900 px-6 py-8 rounded-xl text-center h-full">
-                        <h3 class="text-2xl font-bold text-white mb-2 flex justify-center items-center gap-2">
-                            &#9881; n8n + Gemini 1.5 Pro Brain
-                        </h3>
-                        <p class="text-slate-400 text-sm">Analyzes context, extracts entity data (Name, Skills, Salary), and constructs unified JSON output.</p>
-                    </div>
-                </div>
+function adminTap() {
+  adminTapCount++;
+  clearTimeout(adminTapTimer);
+  adminTapTimer = setTimeout(() => { adminTapCount = 0; }, 2000);
+  if (adminTapCount >= 5) {
+    adminTapCount = 0;
+    if (isAdmin) { openModal(); } else { promptAdmin(); }
+  }
+}
 
-                <div class="text-4xl text-orange-500 animate-bounce py-2">&#8595;</div>
+function promptAdmin() {
+  const pw = prompt(currentLang === 'zh' ? '请输入管理员密码：' : 'Enter admin password:');
+  if (pw === ADMIN_PW) {
+    isAdmin = true;
+    sessionStorage.setItem('sr_admin', '1');
+    document.getElementById('admin-settings-btn').style.display = 'block';
+    openModal();
+  } else if (pw !== null) {
+    alert(currentLang === 'zh' ? '密码错误' : 'Wrong password');
+  }
+}
 
-                <div class="w-full md:w-1/2 bg-sky-900 border-2 border-sky-500 p-6 rounded-2xl text-center shadow-lg">
-                    <div class="text-4xl mb-3">&#128452;</div>
-                    <h3 class="text-xl font-bold text-white mb-1">Firestore Database</h3>
-                    <p class="text-sky-200 text-sm font-mono tracking-wider">/candidates & /applications</p>
-                </div>
+function checkAdminSession() {
+  if (isAdmin) { document.getElementById('admin-settings-btn').style.display = 'block'; }
+}
 
-            </div>
-        </section>
+let currentLang = localStorage.getItem('sr_lang') || 'en';
 
-        <section class="mb-10">
-            <h2 class="text-3xl font-bold text-slate-900 mb-8 text-center">
-                Actionable Next Steps
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <div class="bg-white rounded-2xl p-6 border-l-8 border-orange-500 shadow-md relative overflow-hidden group hover:shadow-xl transition-all duration-300">
-                    <div class="absolute top-4 right-4 text-3xl opacity-20 group-hover:scale-110 transition-transform">1</div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-3">Execute WABA Webhook</h3>
-                    <p class="text-slate-600 text-sm mb-4">Deploy `server.js` on Zeabur. Send test message via Meta test account. Verify end-to-end routing from WhatsApp -> Gemini -> Firebase.</p>
-                    <span class="inline-block px-3 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">Highest Priority</span>
-                </div>
+function applyLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('sr_lang', lang);
+  
+  // Update static elements
+  document.querySelectorAll('[data-zh][data-en]').forEach(el => {
+    el.innerHTML = el.dataset[lang] || el.innerHTML;
+  });
+  
+  // Update dynamic portal
+  renderPortal();
 
-                <div class="bg-white rounded-2xl p-6 border-l-8 border-sky-500 shadow-md relative overflow-hidden group hover:shadow-xl transition-all duration-300">
-                    <div class="absolute top-4 right-4 text-3xl opacity-20 group-hover:scale-110 transition-transform">2</div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-3">Lock Candidate Schema</h3>
-                    <p class="text-slate-600 text-sm mb-4">Finalize Firestore data structures. Guarantee uniformity before funneling scraped/emailed data, establishing a strict prerequisite for Spider Charts.</p>
-                    <span class="inline-block px-3 py-1 bg-sky-100 text-sky-700 rounded text-xs font-bold">Data Integrity</span>
-                </div>
+  const btn = document.getElementById('lang-toggle-btn');
+  if (btn) {
+    document.getElementById('lang-flag').textContent = lang === 'zh' ? '🇬🇧' : '🇨🇳';
+    document.getElementById('lang-label').textContent = lang === 'zh' ? 'EN' : '中文';
+  }
+  document.documentElement.lang = lang === 'zh' ? 'zh' : 'en';
+}
 
-                <div class="bg-white rounded-2xl p-6 border-l-8 border-emerald-500 shadow-md relative overflow-hidden group hover:shadow-xl transition-all duration-300">
-                    <div class="absolute top-4 right-4 text-3xl opacity-20 group-hover:scale-110 transition-transform">3</div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-3">Provision n8n Instance</h3>
-                    <p class="text-slate-600 text-sm mb-4">Deploy self-hosted n8n environment on Zeabur. This creates the visual workflow canvas essential for managing future integrations seamlessly.</p>
-                    <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 rounded text-xs font-bold">Infrastructure</span>
-                </div>
+function toggleLang() { applyLang(currentLang === 'zh' ? 'en' : 'zh'); }
 
-            </div>
-        </section>
+const PROXY_URL_KEY = 'sr_proxy_url';
+function getProxyUrl(){return localStorage.getItem(PROXY_URL_KEY)||'';}
+function getKey(p){return localStorage.getItem(`sr_key_${p||curProvider}`)||'';}
+function getModel(){return localStorage.getItem('sr_model')||PROVIDERS[curProvider].models[0].v;}
 
-    </main>
+function updateApiBar(){
+  const k=getKey();
+  const dot=document.getElementById('api-dot');
+  const label=document.getElementById('api-label');
+  const pu=localStorage.getItem('sr_proxy_url')||'';
+  if(pu){
+    dot.className='api-dot ok';
+    label.textContent=currentLang==='zh'?'🔒 Proxy 模式 — API Key 安全存储在服务器':'🔒 Proxy Mode — API Key secured on server';
+  } else if(k){
+    dot.className='api-dot ok';
+    label.textContent=currentLang==='zh'?`✅ ${PROVIDERS[curProvider].name} 已配置`:`✅ ${PROVIDERS[curProvider].name} Configured`;
+  } else {
+    dot.className='api-dot';
+    label.textContent='⚠️ AI 未配置 · Not Configured — 点击设置';
+  }
+}
 
-    <footer class="bg-slate-900 text-slate-400 py-8 border-t border-slate-800 text-center text-sm">
-        <p>&copy; 2026 Sunrise Recruit Sdn Bhd. Confidential Internal Status Report.</p>
-    </footer>
+function openModal(){
+  curProvider=localStorage.getItem('sr_provider')||'anthropic';
+  renderModal();
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
 
-    <script>
-        function wrapLabel(label, maxChars = 16) {
-            if (typeof label !== 'string') return label;
-            if (label.length <= maxChars) return label;
-            
-            const words = label.split(' ');
-            const lines = [];
-            let currentLine = '';
+function renderModal(){
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.toggle('active',b.dataset.p===curProvider));
+  const p=PROVIDERS[curProvider];
+  document.getElementById('key-input').placeholder=p.placeholder;
+  document.getElementById('key-input').value=getKey(curProvider);
+  document.getElementById('key-label').textContent=`${p.name} API Key`;
+  const sel=document.getElementById('model-select');
+  sel.innerHTML=p.models.map(m=>`<option value="${m.v}"${m.v===getModel()?' selected':''}>${m.l}</option>`).join('');
+  const k=getKey(curProvider);
+  document.getElementById('key-status').innerHTML=k?`<span class="key-ok">✅ 已配置</span>`:`<span class="key-missing">⚠️ 未设置</span>`;
+  document.getElementById('docs-link').textContent=p.docsLabel;
+  const pu=getProxyUrl();
+  document.getElementById('proxy-input').value=pu;
+  document.getElementById('proxy-status').innerHTML=pu
+    ?'<span style="color:var(--success)">✅ Proxy 已配置，Key 安全存储在服务器</span>'
+    :'<span style="color:var(--text3)">未配置 — staff 需各自填 API Key</span>';
+  document.getElementById('docs-link').onclick=()=>window.open(p.docs,'_blank');
+}
 
-            words.forEach(word => {
-                if ((currentLine + word).length > maxChars) {
-                    if (currentLine.trim() !== '') {
-                        lines.push(currentLine.trim());
-                    }
-                    currentLine = word + ' ';
-                } else {
-                    currentLine += word + ' ';
-                }
-            });
-            if (currentLine.trim() !== '') {
-                lines.push(currentLine.trim());
-            }
-            return lines;
-        }
+document.querySelectorAll('.ptab').forEach(btn=>{
+  btn.addEventListener('click',()=>{curProvider=btn.dataset.p;renderModal();});
+});
 
-        const commonTooltipConfig = {
-            callbacks: {
-                title: function(tooltipItems) {
-                    const item = tooltipItems[0];
-                    let label = item.chart.data.labels[item.dataIndex];
-                    if (Array.isArray(label)) {
-                        return label.join(' ');
-                    } else {
-                        return label;
-                    }
-                }
-            }
-        };
+function saveSettings(){
+  const k=document.getElementById('key-input').value.trim();
+  if(k)localStorage.setItem(`sr_key_${curProvider}`,k);
+  localStorage.setItem('sr_provider',curProvider);
+  localStorage.setItem('sr_model',document.getElementById('model-select').value);
+  const pu=document.getElementById('proxy-input').value.trim();
+  if(pu)localStorage.setItem('sr_proxy_url',pu.replace(/\/$/,''));
+  else localStorage.removeItem('sr_proxy_url');
+  closeModal();updateApiBar();
+  showToast('✅ 设置已保存 Settings saved');
+}
 
-        const ctxBar = document.getElementById('healthBarChart').getContext('2d');
-        const rawBarLabels = ['Platform Web Core', 'Firebase Database', 'Omnichannel Ingestion', 'AI Parsing Brain'];
-        const processedBarLabels = rawBarLabels.map(label => wrapLabel(label, 16));
+function showToast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c1c2e;color:#f0f0f8;padding:10px 20px;border-radius:40px;font-size:13px;z-index:200;opacity:0;transition:all 0.3s;border:1px solid #2e2e48;white-space:nowrap;font-family:Outfit,sans-serif';
+    document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},2500);
+}
 
-        new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: processedBarLabels,
-                datasets: [{
-                    label: 'Stability / Completion %',
-                    data: [100, 100, 50, 50],
-                    backgroundColor: [
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(245, 158, 11, 0.8)',
-                        'rgba(245, 158, 11, 0.8)'
-                    ],
-                    borderColor: [
-                        'rgb(5, 150, 105)',
-                        'rgb(5, 150, 105)',
-                        'rgb(217, 119, 6)',
-                        'rgb(217, 119, 6)'
-                    ],
-                    borderWidth: 1,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: commonTooltipConfig
-                },
-                scales: {
-                    x: {
-                        min: 0,
-                        max: 100,
-                        grid: { color: 'rgba(226, 232, 240, 0.5)' },
-                        ticks: {
-                            callback: function(value) { return value + '%' }
-                        }
-                    },
-                    y: {
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
+// 初始执行
+updateApiBar();
+applyLang(currentLang);
+checkAdminSession();
 
-        const ctxDonut = document.getElementById('moduleDonutChart').getContext('2d');
-        const rawDonutLabels = ['Stable & Complete', 'In Progress (POC)', 'Planned Future'];
-        const processedDonutLabels = rawDonutLabels.map(label => wrapLabel(label, 16));
-
-        new Chart(ctxDonut, {
-            type: 'doughnut',
-            data: {
-                labels: processedDonutLabels,
-                datasets: [{
-                    data: [6, 6, 3],
-                    backgroundColor: [
-                        '#10b981',
-                        '#f59e0b',
-                        '#cbd5e1'
-                    ],
-                    hoverOffset: 4,
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                maintainAspectRatio: false,
-                cutout: '65%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            font: { family: "'Segoe UI', sans-serif", size: 13 }
-                        }
-                    },
-                    tooltip: commonTooltipConfig
-                }
-            }
-        });
-    </script>
+</script>
 </body>
 </html>
