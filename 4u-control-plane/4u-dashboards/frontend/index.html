@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4U Control Plane — Blueprint</title>
+<meta name="description" content="Master blueprint of all Sunrise Recruit + 4U Platform features.">
+<link rel="stylesheet" href="/frontend/css/4u.css">
+
+<!-- Firebase compat SDK (optional — REST fallback works without it) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<!-- Server-injected Firebase config -->
+<script src="/config.js"></script>
+<script>
+  // Turn FIREBASE_CONFIG_JSON (injected into __ZEABUR_FIREBASE_CONFIG_JSON) into window.FIREBASE_CONFIG
+  (function(){
+    if (!window.FIREBASE_CONFIG && window.__ZEABUR_FIREBASE_CONFIG_JSON) {
+      try { window.FIREBASE_CONFIG = JSON.parse(window.__ZEABUR_FIREBASE_CONFIG_JSON); }
+      catch(e){ console.error('Invalid FIREBASE_CONFIG_JSON'); }
+    }
+  })();
+</script>
+<script src="/frontend/js/feature-registry.js"></script>
+<script src="/frontend/js/4u-client.js"></script>
+</head>
+<body>
+<div class="shell">
+
+<header class="masthead">
+  <div class="title-block">
+    <div class="edition">Edition 001 · Internal</div>
+    <h1>The 4U Control Plane</h1>
+    <div class="tagline">A live blueprint for the building of Sunrise Recruit.</div>
+  </div>
+  <div class="meta">
+    <div class="logomark"><span class="dot"></span> 4U</div>
+    <div><span class="live-dot"></span><span id="conn-mode">connecting</span></div>
+    <div id="last-sync">synced —</div>
+  </div>
+</header>
+
+<nav class="topnav">
+  <a href="/" class="active">Blueprint</a>
+  <a href="/admin.html">Admin</a>
+  <a href="https://docs.claude.com" target="_blank" rel="noopener">Docs</a>
+</nav>
+
+<section class="rollups" id="rollups">
+  <div class="rollup"><div class="label">Features tracked</div><div class="value" id="rup-total">—</div><div class="sub">across all codebases</div></div>
+  <div class="rollup"><div class="label">Completed</div><div class="value" id="rup-done">—<span class="unit">/ <span id="rup-total-2">—</span></span></div><div class="sub" id="rup-done-sub">—</div></div>
+  <div class="rollup"><div class="label">In progress</div><div class="value" id="rup-wip">—</div><div class="sub">actively being built</div></div>
+  <div class="rollup"><div class="label">Overall progress</div><div class="value"><span id="rup-pct">0</span><span class="unit">%</span></div>
+    <div class="prog tall" style="margin-top:8px"><div class="fill" id="rup-fill" style="width:0%"></div></div>
+  </div>
+</section>
+
+<div class="filterbar" id="filterbar">
+  <span class="fb-label">Phase</span>
+  <button class="chip active" data-filter="phase" data-val="all">All</button>
+  <button class="chip" data-filter="phase" data-val="P0">P0 · Control</button>
+  <button class="chip" data-filter="phase" data-val="P1">P1 · Foundation</button>
+  <button class="chip" data-filter="phase" data-val="P2">P2 · Core</button>
+  <button class="chip" data-filter="phase" data-val="P3">P3 · Growth</button>
+  <button class="chip" data-filter="phase" data-val="P4">P4 · Scale</button>
+  <button class="chip" data-filter="phase" data-val="N0">n8n · Now</button>
+  <button class="chip" data-filter="phase" data-val="N1">n8n · Next</button>
+  <button class="chip" data-filter="phase" data-val="N2">n8n · Later</button>
+  <span style="flex:1"></span>
+  <span class="fb-label">Codebase</span>
+  <button class="chip active" data-filter="cb" data-val="all">All</button>
+  <button class="chip" data-filter="cb" data-val="sr-web-as">SR-Web-AS</button>
+  <button class="chip" data-filter="cb" data-val="sunrise-tools">sunrise-tools</button>
+  <button class="chip" data-filter="cb" data-val="sr-proxy">sr-proxy</button>
+  <button class="chip" data-filter="cb" data-val="n8n">n8n</button>
+  <button class="chip" data-filter="cb" data-val="4u-platform">4U Platform</button>
+</div>
+
+<main id="phases-root"><div class="loading">loading features</div></main>
+
+<footer class="foot">
+  <div>4U Control Plane · Sunrise Recruit Build Log · 2026</div>
+  <div id="footer-mode">mode: —</div>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  const { FEATURES, PHASES, getPhase, getCodebase } = window.FEATURE_REGISTRY;
+  const root = document.getElementById('phases-root');
+  const filters = { phase: 'all', cb: 'all' };
+  let latestMerged = [];
+
+  // Initialize filter chip clicks
+  document.getElementById('filterbar').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    const group = chip.dataset.filter;
+    filters[group] = chip.dataset.val;
+    // visually activate
+    document.querySelectorAll(`.chip[data-filter="${group}"]`).forEach(c =>
+      c.classList.toggle('active', c === chip));
+    render();
+  });
+
+  function applyFilters(list) {
+    return list.filter(f =>
+      (filters.phase === 'all' || f.phase === filters.phase) &&
+      (filters.cb === 'all' || f.codebase === filters.cb)
+    );
+  }
+
+  function render() {
+    const list = applyFilters(latestMerged);
+
+    // Rollups (always based on FILTERED list so tiles reflect the view)
+    const total = list.length;
+    const done = list.filter(f => f.status === 'done').length;
+    const wip = list.filter(f => f.status === 'in-progress').length;
+    const pct = total === 0 ? 0 : Math.round(list.reduce((a, f) => a + (f.progress || 0), 0) / total);
+    document.getElementById('rup-total').textContent = total;
+    document.getElementById('rup-total-2').textContent = total;
+    document.getElementById('rup-done').childNodes[0].nodeValue = done;
+    document.getElementById('rup-done-sub').textContent = total > 0 ? `${Math.round(100*done/total)}% shipped` : '—';
+    document.getElementById('rup-wip').textContent = wip;
+    document.getElementById('rup-pct').textContent = pct;
+    document.getElementById('rup-fill').style.width = pct + '%';
+
+    // Group by phase (in phase order)
+    const phaseOrder = Object.values(PHASES).sort((a,b) => a.order - b.order).map(p => p.id);
+    const byPhase = {};
+    phaseOrder.forEach(p => byPhase[p] = []);
+    list.forEach(f => { (byPhase[f.phase] = byPhase[f.phase] || []).push(f); });
+
+    let html = '';
+    phaseOrder.forEach(pid => {
+      const group = byPhase[pid] || [];
+      if (group.length === 0) return;
+      const phase = getPhase(pid);
+      const groupPct = Math.round(group.reduce((a,f) => a + (f.progress || 0), 0) / group.length);
+      html += `
+        <div class="section-header">
+          <h2>${escapeHtml(phase.label)}</h2>
+          <span class="phase-meta">${escapeHtml(phase.timeline)} · ${group.length} features · ${groupPct}% rolled up</span>
+          <span class="rule"></span>
+        </div>
+        <div class="feat-grid">
+          ${group.map(featCard).join('')}
+        </div>`;
+    });
+
+    if (!html) {
+      html = `<div class="empty">No features match these filters.</div>`;
+    }
+    root.innerHTML = html;
+  }
+
+  function featCard(f) {
+    const cb = getCodebase(f.codebase);
+    return `
+      <a class="feat-card" href="/feature.html?id=${encodeURIComponent(f.id)}">
+        <div class="feat-head">
+          <div class="feat-name">${escapeHtml(f.name)}</div>
+          <span class="pill s-${f.status}"><span class="dot"></span>${f.status.replace('-', ' ')}</span>
+        </div>
+        <div class="feat-sum">${escapeHtml(f.summary)}</div>
+        <div>
+          <div class="prog ${f.status === 'done' ? 'done' : ''}"><div class="fill" style="width:${f.progress}%"></div></div>
+          <div class="prog-label">
+            <span>${f.progress}%</span>
+            <span>${escapeHtml(f.audience)} · ${escapeHtml((f.size || '').split('·')[0].trim())}</span>
+          </div>
+        </div>
+        <div class="feat-foot">
+          <span class="cb-tag cb-${f.codebase}">${escapeHtml(cb.label)}</span>
+          <span>${escapeHtml(f.phase)}</span>
+        </div>
+      </a>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Start subscription
+  FourU.init();
+  document.getElementById('conn-mode').textContent = FourU.mode === 'firestore' ? 'live · firestore' : 'polling · rest';
+  document.getElementById('footer-mode').textContent = 'mode: ' + FourU.mode;
+
+  FourU.subscribeProjects(
+    (list) => {
+      latestMerged = FourU.mergeWithRegistry(list);
+      const latest = latestMerged.map(f => f.lastUpdated).filter(Boolean).sort().pop();
+      document.getElementById('last-sync').textContent = 'synced ' + (latest ? FourU.formatWhen(latest) : '—');
+      render();
+    },
+    (err) => {
+      console.error(err);
+      document.getElementById('conn-mode').textContent = 'offline';
+      // Render registry only so the user sees something
+      if (latestMerged.length === 0) { latestMerged = FourU.mergeWithRegistry([]); render(); }
+    }
+  );
+
+  // Initial render from registry while we wait for first snapshot
+  latestMerged = FourU.mergeWithRegistry([]);
+  render();
+})();
+</script>
+</body>
+</html>

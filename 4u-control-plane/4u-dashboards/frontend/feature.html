@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4U · Feature</title>
+<link rel="stylesheet" href="/frontend/css/4u.css">
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="/config.js"></script>
+<script>
+  (function(){
+    if (!window.FIREBASE_CONFIG && window.__ZEABUR_FIREBASE_CONFIG_JSON) {
+      try { window.FIREBASE_CONFIG = JSON.parse(window.__ZEABUR_FIREBASE_CONFIG_JSON); } catch(e){}
+    }
+  })();
+</script>
+<script src="/frontend/js/feature-registry.js"></script>
+<script src="/frontend/js/4u-client.js"></script>
+</head>
+<body>
+<div class="shell">
+
+<header class="masthead">
+  <div class="title-block">
+    <div class="edition"><a href="/">← Blueprint</a> · Feature Detail</div>
+    <h1 id="feat-title">Loading</h1>
+    <div class="tagline" id="feat-tagline">—</div>
+  </div>
+  <div class="meta">
+    <div class="logomark"><span class="dot"></span> 4U</div>
+    <div><span class="live-dot"></span><span id="conn-mode">connecting</span></div>
+    <div id="last-sync">synced —</div>
+  </div>
+</header>
+
+<nav class="topnav">
+  <a href="/">Blueprint</a>
+  <a href="/admin.html">Admin</a>
+  <a href="#" class="active" id="edit-link">Edit this feature</a>
+</nav>
+
+<main id="root"><div class="loading">loading feature</div></main>
+
+<footer class="foot">
+  <div>4U Control Plane · Feature Page</div>
+  <div id="footer-mode">mode: —</div>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  const { getById, getCodebase, getPhase } = window.FEATURE_REGISTRY;
+  const root = document.getElementById('root');
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+
+  if (!id) {
+    root.innerHTML = `<div class="empty">No feature id specified. Try <a href="/">the blueprint</a>.</div>`;
+    return;
+  }
+  const base = getById(id);
+  if (!base) {
+    root.innerHTML = `<div class="empty">Feature <code>${escapeHtml(id)}</code> not found in the registry.</div>`;
+    return;
+  }
+
+  document.getElementById('edit-link').href = `/admin.html#${encodeURIComponent(id)}`;
+
+  function render(live) {
+    // Merge base registry with live doc, derive progress from subtasks
+    const subtasks = Array.isArray(live && live.subtasks) && live.subtasks.length
+      ? live.subtasks
+      : base.subtasks.map(label => ({ label, done: false }));
+    let progress = typeof (live && live.progress) === 'number' ? live.progress : null;
+    if (progress === null) {
+      progress = subtasks.length === 0 ? 0
+        : Math.round(100 * subtasks.filter(s => s.done).length / subtasks.length);
+    }
+    const status = (live && live.status) || (progress === 0 ? 'planned' : progress >= 100 ? 'done' : 'in-progress');
+    const cb = getCodebase(base.codebase);
+    const phase = getPhase(base.phase);
+    const notes = (live && live.notes) || '';
+    const owner = (live && live.owner) || '—';
+    const lastUpdated = live && live.lastUpdated;
+
+    document.getElementById('feat-title').textContent = base.name;
+    document.getElementById('feat-tagline').textContent = base.value;
+    document.title = '4U · ' + base.name;
+    if (lastUpdated) document.getElementById('last-sync').textContent = 'synced ' + FourU.formatWhen(lastUpdated);
+
+    root.innerHTML = `
+      <section class="feat-hero">
+        <div>
+          <div class="row wrap" style="margin-bottom:14px">
+            <span class="pill s-${status}"><span class="dot"></span>${escapeHtml(status.replace('-',' '))}</span>
+            <span class="cb-tag cb-${base.codebase}">${escapeHtml(cb.label)}</span>
+            <span class="kicker">${escapeHtml(phase.label)}</span>
+          </div>
+          <p class="lede">${escapeHtml(base.summary)}</p>
+          <div style="margin-top:20px">
+            <div class="prog tall ${status === 'done' ? 'done' : ''}"><div class="fill" style="width:${progress}%"></div></div>
+            <div class="prog-label">
+              <span class="prog-pct">${progress}%</span>
+              <span>${subtasks.filter(s => s.done).length} / ${subtasks.length} checks complete</span>
+            </div>
+          </div>
+        </div>
+        <aside class="aside">
+          <dl>
+            <dt>Codebase</dt><dd>${escapeHtml(cb.label)} <div class="mute" style="font-size:10px">${escapeHtml(cb.note)}</div></dd>
+            <dt>Phase</dt><dd>${escapeHtml(phase.label)}<div class="mute" style="font-size:10px">${escapeHtml(phase.timeline)}</div></dd>
+            <dt>Audience</dt><dd>${escapeHtml(base.audience)}</dd>
+            <dt>Size</dt><dd>${escapeHtml(base.size)}</dd>
+            <dt>Owner</dt><dd>${escapeHtml(owner)}</dd>
+            <dt>Updated</dt><dd class="mute">${lastUpdated ? escapeHtml(FourU.formatWhen(lastUpdated)) : '—'}</dd>
+          </dl>
+        </aside>
+      </section>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="kicker">Checklist · ${subtasks.length} items</span>
+          <div class="mute" style="font-size:10px">read-only view · edit in Admin</div>
+        </div>
+        <ol class="checklist">
+          ${subtasks.map((t, i) => `
+            <li class="${t.done ? 'checked' : ''}">
+              <span class="box"></span>
+              <span class="task">${escapeHtml(t.label)}</span>
+              <span class="idx">${String(i + 1).padStart(2, '0')}</span>
+            </li>
+          `).join('')}
+        </ol>
+      </div>
+
+      ${notes ? `
+        <div class="panel">
+          <div class="panel-head"><span class="kicker">Notes</span></div>
+          <p class="serif" style="font-size:14px; line-height:1.6; white-space:pre-wrap">${escapeHtml(notes)}</p>
+        </div>
+      ` : ''}
+
+      <div class="panel">
+        <div class="panel-head"><span class="kicker">Business Value</span></div>
+        <p class="serif italic" style="font-size:14px">${escapeHtml(base.value)}</p>
+      </div>
+    `;
+  }
+
+  FourU.init();
+  document.getElementById('conn-mode').textContent = FourU.mode === 'firestore' ? 'live · firestore' : 'polling · rest';
+  document.getElementById('footer-mode').textContent = 'mode: ' + FourU.mode;
+
+  // Initial render from registry
+  render(null);
+  // Then subscribe to live
+  FourU.subscribeProject(id, (doc) => render(doc), (err) => console.error(err));
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+})();
+</script>
+</body>
+</html>
