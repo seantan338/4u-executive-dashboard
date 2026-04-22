@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4U · Admin</title>
+<link rel="stylesheet" href="/frontend/css/4u.css">
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="/config.js"></script>
+<script>
+  (function(){
+    if (!window.FIREBASE_CONFIG && window.__ZEABUR_FIREBASE_CONFIG_JSON) {
+      try { window.FIREBASE_CONFIG = JSON.parse(window.__ZEABUR_FIREBASE_CONFIG_JSON); } catch(e){}
+    }
+  })();
+</script>
+<script src="/frontend/js/feature-registry.js"></script>
+<script src="/frontend/js/4u-client.js"></script>
+<style>
+  .editor {
+    display: grid;
+    grid-template-columns: minmax(240px, 320px) 1fr;
+    gap: 20px;
+    margin-top: 14px;
+  }
+  @media (max-width: 820px) { .editor { grid-template-columns: 1fr; } }
+  .feat-list { max-height: 70vh; overflow-y: auto; border: 1px solid var(--rule); }
+  .feat-list .item {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .feat-list .item:hover { background: var(--paper-2); }
+  .feat-list .item.active { background: var(--paper-2); border-left: 2px solid var(--amber); padding-left: 10px; }
+  .feat-list .item .name {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 13px; font-weight: 600;
+    line-height: 1.25;
+  }
+  .feat-list .item .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--text-mute);
+    margin-top: 3px; letter-spacing: 0.05em;
+  }
+  .feat-list .item .pct {
+    font-family: 'IBM Plex Serif', serif; font-weight: 600;
+    font-size: 14px;
+  }
+  .ed-panel { min-height: 400px; }
+  .ed-field { margin-bottom: 16px; }
+  .ed-field label {
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text-mute); display: block; margin-bottom: 6px;
+  }
+  .subtask-edit {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .subtask-edit .rm {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-mute);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+  .subtask-edit .rm:hover { color: var(--blk); }
+  .status-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .status-row button {
+    padding: 10px 8px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .status-row button.active {
+    background: var(--paper-2);
+    color: var(--text);
+    border-color: var(--amber);
+  }
+  .status-row button.active.s-done     { border-color: var(--ok); color: var(--ok); }
+  .status-row button.active.s-blocked  { border-color: var(--blk); color: var(--blk); }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 18px; border-top: 1px solid var(--rule); margin-top: 18px; }
+  .progress-control { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+  .progress-control input[type="range"] { width: 100%; accent-color: var(--amber); }
+  .progress-control .pct-display {
+    font-family: 'IBM Plex Serif', serif;
+    font-weight: 600; font-size: 24px;
+    min-width: 56px; text-align: right;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header class="masthead">
+  <div class="title-block">
+    <div class="edition"><a href="/">← Blueprint</a> · Admin</div>
+    <h1>Feature Progress Editor</h1>
+    <div class="tagline">Toggle what's done, adjust progress, leave notes. Writes land in Firestore via the project API.</div>
+  </div>
+  <div class="meta">
+    <div class="logomark"><span class="dot"></span> 4U</div>
+    <div><span class="live-dot"></span><span id="conn-mode">connecting</span></div>
+    <div id="last-sync">synced —</div>
+  </div>
+</header>
+
+<nav class="topnav">
+  <a href="/">Blueprint</a>
+  <a href="/admin.html" class="active">Admin</a>
+  <button class="chip" id="seed-btn" style="margin-left:auto">Seed all features to Firestore</button>
+</nav>
+
+<div class="editor">
+  <aside class="feat-list" id="feat-list">
+    <div class="loading">loading</div>
+  </aside>
+
+  <section class="panel ed-panel" id="editor-panel">
+    <div class="empty">Select a feature on the left to edit.</div>
+  </section>
+</div>
+
+<footer class="foot">
+  <div>Admin UI · no auth · Zeabur network rules</div>
+  <div id="footer-mode">mode: —</div>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  const { getCodebase, getPhase } = window.FEATURE_REGISTRY;
+  const listEl = document.getElementById('feat-list');
+  const panel = document.getElementById('editor-panel');
+
+  let merged = [];
+  let selectedId = location.hash ? decodeURIComponent(location.hash.slice(1)) : null;
+  // Local draft of the feature being edited (NOT mutated from snapshots while editing)
+  let draft = null;
+  let saving = false;
+
+  FourU.init();
+  document.getElementById('conn-mode').textContent = FourU.mode === 'firestore' ? 'live · firestore' : 'polling · rest';
+  document.getElementById('footer-mode').textContent = 'mode: ' + FourU.mode;
+
+  FourU.subscribeProjects(
+    (list) => {
+      merged = FourU.mergeWithRegistry(list);
+      const latest = merged.map(f => f.lastUpdated).filter(Boolean).sort().pop();
+      document.getElementById('last-sync').textContent = 'synced ' + (latest ? FourU.formatWhen(latest) : '—');
+      renderList();
+      // Only reset draft when not actively editing (or when the selected id changes)
+      if (!draft || draft.id !== selectedId) {
+        loadDraftFromSelection();
+      }
+      renderEditor();
+    },
+    (err) => { console.error(err); }
+  );
+
+  // Also render immediately from registry so list is populated even if firestore is still connecting
+  merged = FourU.mergeWithRegistry([]);
+  if (!selectedId && merged.length) selectedId = merged[0].id;
+  loadDraftFromSelection();
+  renderList();
+  renderEditor();
+
+  // ---- List -------------------------------------------------------------
+  function renderList() {
+    listEl.innerHTML = merged.map(f => `
+      <div class="item ${f.id === selectedId ? 'active' : ''}" data-id="${f.id}">
+        <div>
+          <div class="name">${esc(f.name)}</div>
+          <div class="meta">${esc(f.phase)} · ${esc(getCodebase(f.codebase).label)}</div>
+        </div>
+        <div class="pct">${f.progress}%</div>
+      </div>
+    `).join('');
+    listEl.querySelectorAll('.item').forEach(el => {
+      el.addEventListener('click', () => {
+        if (saving) return;
+        selectedId = el.dataset.id;
+        history.replaceState(null, '', '#' + encodeURIComponent(selectedId));
+        loadDraftFromSelection();
+        renderList();
+        renderEditor();
+      });
+    });
+  }
+
+  function loadDraftFromSelection() {
+    const src = merged.find(f => f.id === selectedId) || merged[0];
+    if (!src) { draft = null; return; }
+    // deep clone what we'll edit
+    draft = {
+      id: src.id,
+      name: src.name,
+      phase: src.phase,
+      codebase: src.codebase,
+      audience: src.audience,
+      size: src.size,
+      summary: src.summary,
+      value: src.value,
+      status: src.status,
+      progress: src.progress,
+      owner: src.owner || '',
+      notes: src.notes || '',
+      subtasks: src.subtasks.map(s => ({ label: s.label, done: !!s.done })),
+    };
+  }
+
+  // ---- Editor ----------------------------------------------------------
+  function renderEditor() {
+    if (!draft) { panel.innerHTML = `<div class="empty">No feature selected.</div>`; return; }
+    const cb = getCodebase(draft.codebase);
+    const phase = getPhase(draft.phase);
+    const doneCount = draft.subtasks.filter(s => s.done).length;
+
+    panel.innerHTML = `
+      <div class="panel-head">
+        <div>
+          <div class="kicker">Editing · ${esc(draft.id)}</div>
+          <h2 style="margin-top:4px">${esc(draft.name)}</h2>
+          <div class="mute" style="font-size:11px; margin-top:4px">
+            <span class="cb-tag cb-${draft.codebase}">${esc(cb.label)}</span>
+            <span style="margin-left:8px">${esc(phase.label)}</span>
+          </div>
+        </div>
+        <a href="/feature.html?id=${encodeURIComponent(draft.id)}" class="mono" style="font-size:10px">view public page →</a>
+      </div>
+
+      <div class="ed-field">
+        <label>Status</label>
+        <div class="status-row" id="status-row">
+          ${FourU.STATUSES.map(s => `
+            <button data-status="${s}" class="s-${s} ${draft.status === s ? 'active' : ''}">${s.replace('-', ' ')}</button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="ed-field">
+        <label>Progress override (auto = from checklist)</label>
+        <div class="progress-control">
+          <input type="range" id="prog-range" min="0" max="100" step="5" value="${draft.progress}">
+          <div class="pct-display"><span id="prog-val">${draft.progress}</span>%</div>
+        </div>
+        <div class="mute" style="font-size:10px; margin-top:6px">
+          Derived from checks: ${doneCount} / ${draft.subtasks.length} =
+          ${draft.subtasks.length ? Math.round(100 * doneCount / draft.subtasks.length) : 0}% ·
+          <button class="chip" id="derive-btn" style="margin-left:6px">reset to derived</button>
+        </div>
+      </div>
+
+      <div class="ed-field">
+        <label>Owner</label>
+        <input class="input" id="owner-input" value="${esc(draft.owner || '')}" placeholder="e.g. Sean / team name">
+      </div>
+
+      <div class="ed-field">
+        <label>Notes (markdown-ish · plain text)</label>
+        <textarea class="input" id="notes-input" rows="4" placeholder="Blockers, decisions, links, whatever matters">${esc(draft.notes || '')}</textarea>
+      </div>
+
+      <div class="ed-field">
+        <label>Checklist · ${draft.subtasks.length} items</label>
+        <div id="subtask-list">
+          ${draft.subtasks.map((t, i) => subtaskRow(t, i)).join('')}
+        </div>
+        <div style="margin-top:10px; display:flex; gap:8px; align-items:center">
+          <input class="input" id="new-subtask" placeholder="Add new checklist item…" style="flex:1">
+          <button class="btn" id="add-subtask">+ add</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" id="reset-btn">Discard changes</button>
+        <button class="btn primary" id="save-btn" ${saving ? 'disabled' : ''}>${saving ? 'Saving…' : 'Save to Firestore'}</button>
+      </div>
+    `;
+    wireEditor();
+  }
+
+  function subtaskRow(t, i) {
+    return `
+      <div class="subtask-edit" data-idx="${i}">
+        <button class="box ${t.done ? '' : ''}" data-toggle="${i}" aria-label="toggle" style="${t.done ? 'background:var(--amber);border-color:var(--amber)' : ''}"></button>
+        <input class="input" data-label="${i}" value="${esc(t.label)}">
+        <button class="rm" data-remove="${i}" title="remove">✕</button>
+      </div>
+    `;
+  }
+
+  function wireEditor() {
+    // Status
+    panel.querySelectorAll('#status-row button').forEach(b => {
+      b.addEventListener('click', () => {
+        draft.status = b.dataset.status;
+        renderEditor();
+      });
+    });
+    // Progress range
+    const range = panel.querySelector('#prog-range');
+    const val = panel.querySelector('#prog-val');
+    range.addEventListener('input', () => {
+      draft.progress = parseInt(range.value, 10);
+      val.textContent = draft.progress;
+    });
+    // Reset to derived
+    panel.querySelector('#derive-btn').addEventListener('click', () => {
+      const n = draft.subtasks.length;
+      draft.progress = n === 0 ? 0 : Math.round(100 * draft.subtasks.filter(s => s.done).length / n);
+      renderEditor();
+    });
+    // Owner / notes
+    panel.querySelector('#owner-input').addEventListener('input', e => { draft.owner = e.target.value; });
+    panel.querySelector('#notes-input').addEventListener('input', e => { draft.notes = e.target.value; });
+    // Subtasks: toggle / label / remove
+    panel.querySelectorAll('[data-toggle]').forEach(b => {
+      b.addEventListener('click', () => {
+        const i = +b.dataset.toggle;
+        draft.subtasks[i].done = !draft.subtasks[i].done;
+        // Auto-sync progress to derived if user hasn't manually set it to something weird
+        const n = draft.subtasks.length;
+        draft.progress = n === 0 ? 0 : Math.round(100 * draft.subtasks.filter(s => s.done).length / n);
+        draft.status = draft.progress >= 100 ? 'done' : draft.progress === 0 ? 'planned' : 'in-progress';
+        renderEditor();
+      });
+    });
+    panel.querySelectorAll('[data-label]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        draft.subtasks[+inp.dataset.label].label = inp.value;
+      });
+    });
+    panel.querySelectorAll('[data-remove]').forEach(b => {
+      b.addEventListener('click', () => {
+        draft.subtasks.splice(+b.dataset.remove, 1);
+        renderEditor();
+      });
+    });
+    // Add subtask
+    panel.querySelector('#add-subtask').addEventListener('click', () => {
+      const inp = panel.querySelector('#new-subtask');
+      const label = (inp.value || '').trim();
+      if (!label) return;
+      draft.subtasks.push({ label, done: false });
+      inp.value = '';
+      renderEditor();
+    });
+    panel.querySelector('#new-subtask').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); panel.querySelector('#add-subtask').click(); }
+    });
+    // Reset
+    panel.querySelector('#reset-btn').addEventListener('click', () => {
+      loadDraftFromSelection();
+      renderEditor();
+      FourU.toast('Changes discarded');
+    });
+    // Save
+    panel.querySelector('#save-btn').addEventListener('click', async () => {
+      saving = true; renderEditor();
+      try {
+        await FourU.upsertProject({
+          id: draft.id,
+          name: draft.name,
+          phase: draft.phase,
+          codebase: draft.codebase,
+          status: draft.status,
+          progress: draft.progress,
+          owner: draft.owner,
+          notes: draft.notes,
+          subtasks: draft.subtasks,
+        });
+        FourU.toast('Saved · ' + draft.name);
+      } catch (e) {
+        console.error(e);
+        FourU.toast('Save failed: ' + e.message, 'error');
+      } finally {
+        saving = false; renderEditor();
+      }
+    });
+  }
+
+  // ---- Seed -------------------------------------------------------------
+  document.getElementById('seed-btn').addEventListener('click', async () => {
+    if (!confirm('Seed all ' + merged.length + ' features to Firestore? This will create/overwrite docs that are missing fields. (Existing progress is preserved if set.)')) return;
+    let ok = 0, fail = 0;
+    for (const f of merged) {
+      try {
+        await FourU.upsertProject({
+          id: f.id,
+          name: f.name,
+          phase: f.phase,
+          codebase: f.codebase,
+          status: f.status,
+          progress: f.progress,
+          owner: f.owner || '',
+          notes: f.notes || '',
+          subtasks: f.subtasks,
+        });
+        ok++;
+      } catch (e) { console.error('seed fail', f.id, e); fail++; }
+    }
+    FourU.toast(`Seed complete · ${ok} ok, ${fail} failed`);
+  });
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+})();
+</script>
+</body>
+</html>
