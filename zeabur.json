@@ -1,6 +1,10 @@
 {
-  "buildType": "nodejs",
-  "installCommand": "npm install",
-  "startCommand": "npm start",
-  "port": 3000
+  "name": "4u-control-plane",
+  "ports": [
+    { "id": "web", "port": 3000, "type": "HTTP" }
+  ],
+  "healthCheck": {
+    "type": "HTTP",
+    "path": "/health"
+  }
 }
