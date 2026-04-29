@@ -1,179 +1,202 @@
 // backend/server.js
-// Sunrise Recruit / 4U Platform — Main Express Server
-// Handles: static config injection, progress webhook, projects API, CORS
+// 4U Control Plane · Express server
+// - Serves the new /frontend/ dashboard assets
+// - Injects FIREBASE_CONFIG_JSON via /config.js
+// - REST API for projects (Firestore-backed, in-memory fallback for dev)
+// - Webhook for automated progress updates (future n8n / CI)
 
-require('dotenv').config(); // loads .env for local dev (npm install dotenv)
+require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 
-// ─── Firebase Admin ───────────────────────────────────────────────────────────
+// ─── Firebase Admin (optional) ───────────────────────────────────────────────
 const admin = require('firebase-admin');
 
 function initFirebaseAdmin() {
-    if (admin.apps && admin.apps.length) return admin;
-    const raw = process.env.FIREBASE_SA_JSON || '';
-    if (!raw) {
-        console.warn('[firebase] FIREBASE_SA_JSON not set — admin SDK disabled');
-        return null;
-    }
-    try {
-        const sa = raw.trim().startsWith('{')
-            ? JSON.parse(raw)
-            : JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
-        admin.initializeApp({ credential: admin.credential.cert(sa) });
-        console.info('[firebase] Admin SDK initialized');
-        return admin;
-    } catch (e) {
-        console.error('[firebase] Failed to init Admin SDK:', e.message);
-        return null;
-    }
+  if (admin.apps && admin.apps.length) return admin;
+  const raw = process.env.FIREBASE_SA_JSON || '';
+  if (!raw) {
+    console.warn('[firebase] FIREBASE_SA_JSON not set — using in-memory store');
+    return null;
+  }
+  try {
+    const sa = raw.trim().startsWith('{')
+      ? JSON.parse(raw)
+      : JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
+    admin.initializeApp({ credential: admin.credential.cert(sa) });
+    console.info('[firebase] Admin SDK initialized');
+    return admin;
+  } catch (e) {
+    console.error('[firebase] Failed to init Admin SDK:', e.message);
+    return null;
+  }
 }
 
 const firebaseAdmin = initFirebaseAdmin();
 const db = firebaseAdmin ? firebaseAdmin.firestore() : null;
 
+// In-memory fallback store so the UI is usable locally without Firebase creds.
+// NOT persisted across restarts.
+const memStore = new Map();
+
 // ─── Express setup ────────────────────────────────────────────────────────────
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// CORS — allow all origins (tighten in production if needed)
 app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-webhook-secret');
-    if (req.method === 'OPTIONS') return res.sendStatus(204);
-    next();
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-webhook-secret');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
 });
 
-// ─── Serve frontend static files ──────────────────────────────────────────────
-app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
-// Serve root index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+// ─── Static frontend ──────────────────────────────────────────────────────────
+const frontendDir = path.join(__dirname, '..', 'frontend');
+app.use('/frontend', express.static(frontendDir));
+
+// Pretty routes → html files
+const pages = {
+  '/':            'index.html',
+  '/index.html':  'index.html',
+  '/admin':       'admin.html',
+  '/admin.html':  'admin.html',
+  '/feature':     'feature.html',
+  '/feature.html':'feature.html',
+};
+Object.entries(pages).forEach(([route, file]) => {
+  app.get(route, (_req, res) => {
+    const p = path.join(frontendDir, file);
+    if (fs.existsSync(p)) res.sendFile(p);
+    else res.status(404).send('Page not found: ' + file);
+  });
 });
 
-// ─── /config.js — inject Firebase frontend config from env into page ──────────
-// Frontend pages load <script src="/config.js"></script>
-// which sets window.__ZEABUR_FIREBASE_CONFIG_JSON for api-client.js to consume
-app.get('/config.js', (req, res) => {
-    const cfg = process.env.FIREBASE_CONFIG_JSON || '{}';
-    const safe = cfg.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    res.type('application/javascript');
-    res.send(`window.__ZEABUR_FIREBASE_CONFIG_JSON = '${safe}';`);
+// ─── /config.js — inject Firebase client config from env ─────────────────────
+app.get('/config.js', (_req, res) => {
+  const cfg = process.env.FIREBASE_CONFIG_JSON || '{}';
+  // Single-quote safe
+  const safe = cfg.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  res.type('application/javascript');
+  res.send(`window.__ZEABUR_FIREBASE_CONFIG_JSON = '${safe}';`);
 });
 
-// ─── Health check ─────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-    res.json({
-        ok: true,
-        time: new Date().toISOString(),
-        firebase: !!db
-    });
+// ─── Health ───────────────────────────────────────────────────────────────────
+app.get('/health', (_req, res) => {
+  res.json({
+    ok: true,
+    time: new Date().toISOString(),
+    firebase: !!db,
+    store: db ? 'firestore' : 'memory',
+    memCount: memStore.size,
+  });
 });
 
-// ─── GET /api/projects — list all projects (REST fallback / admin) ─────────────
-app.get('/api/projects', async (req, res) => {
-    if (!db) return res.status(503).json({ error: 'database not available' });
-    try {
-        const snap = await db.collection('projects').get();
-        const list = [];
-        snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-        res.json(list);
-    } catch (err) {
-        console.error('/api/projects error', err);
-        res.status(500).json({ error: 'server error' });
+// ─── Projects API ─────────────────────────────────────────────────────────────
+// GET /api/projects — list all
+app.get('/api/projects', async (_req, res) => {
+  try {
+    if (db) {
+      const snap = await db.collection('projects').get();
+      const list = [];
+      snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+      return res.json(list);
     }
+    return res.json(Array.from(memStore.values()));
+  } catch (e) {
+    console.error('GET /api/projects', e);
+    res.status(500).json({ error: 'server error' });
+  }
 });
 
-// ─── GET /api/projects/:id — single project ────────────────────────────────────
+// GET /api/projects/:id
 app.get('/api/projects/:id', async (req, res) => {
-    if (!db) return res.status(503).json({ error: 'database not available' });
-    try {
-        const doc = await db.collection('projects').doc(req.params.id).get();
-        if (!doc.exists) return res.status(404).json({ error: 'not found' });
-        res.json({ id: doc.id, ...doc.data() });
-    } catch (err) {
-        console.error('/api/projects/:id error', err);
-        res.status(500).json({ error: 'server error' });
+  try {
+    const id = req.params.id;
+    if (db) {
+      const doc = await db.collection('projects').doc(id).get();
+      if (!doc.exists) return res.status(404).json({ error: 'not found' });
+      return res.json({ id: doc.id, ...doc.data() });
     }
+    const found = memStore.get(id);
+    if (!found) return res.status(404).json({ error: 'not found' });
+    res.json(found);
+  } catch (e) {
+    console.error('GET /api/projects/:id', e);
+    res.status(500).json({ error: 'server error' });
+  }
 });
 
-// ─── POST /api/projects — create project ───────────────────────────────────────
-app.post('/api/projects', async (req, res) => {
-    if (!db) return res.status(503).json({ error: 'database not available' });
-    const payload = req.body;
-    if (!payload || !payload.id) return res.status(400).json({ error: 'missing id' });
-    try {
-        const id = String(payload.id);
-        const doc = { ...payload };
-        delete doc.id;
-        doc.createdAt = new Date().toISOString();
-        doc.lastUpdated = doc.createdAt;
-        await db.collection('projects').doc(id).set(doc);
-        res.status(201).json({ ok: true, id });
-    } catch (err) {
-        console.error('/api/projects POST error', err);
-        res.status(500).json({ error: 'server error' });
-    }
-});
+// Shared upsert logic
+async function upsert(id, body, merge) {
+  const doc = { ...body };
+  delete doc.id;
+  doc.lastUpdated = new Date().toISOString();
+  if (!doc.createdAt) doc.createdAt = doc.lastUpdated;
 
-// ─── PUT/PATCH /api/projects/:id — update project ──────────────────────────────
-async function updateProject(req, res, merge) {
-    if (!db) return res.status(503).json({ error: 'database not available' });
-    try {
-        const id = req.params.id;
-        const doc = { ...req.body };
-        delete doc.id;
-        doc.lastUpdated = new Date().toISOString();
-        await db.collection('projects').doc(id).set(doc, { merge });
-        res.json({ ok: true, id });
-    } catch (err) {
-        console.error('update project error', err);
-        res.status(500).json({ error: 'server error' });
-    }
+  if (db) {
+    await db.collection('projects').doc(id).set(doc, { merge });
+  } else {
+    const current = memStore.get(id) || {};
+    memStore.set(id, merge ? { ...current, ...doc, id } : { ...doc, id, createdAt: current.createdAt || doc.createdAt });
+  }
+  return { ok: true, id };
 }
-app.put('/api/projects/:id', (req, res) => updateProject(req, res, false));
-app.patch('/api/projects/:id', (req, res) => updateProject(req, res, true));
 
-// ─── POST /webhook/progress — n8n / automation progress updates ────────────────
-// Expects header: x-webhook-secret matching env WEBHOOK_SECRET
-// Body: { id, name?, progress, status, notes?, tags?, region? }
-app.post('/webhook/progress', async (req, res) => {
-    try {
-        const secret = process.env.WEBHOOK_SECRET || '';
-        const provided = req.get('x-webhook-secret') || req.query.secret || '';
-        if (secret && provided !== secret) {
-            return res.status(403).json({ error: 'forbidden' });
-        }
-
-        const payload = req.body;
-        if (!payload || !payload.id) return res.status(400).json({ error: 'missing id' });
-        if (!db) return res.status(503).json({ error: 'database not available' });
-
-        const id = String(payload.id);
-        const doc = { ...payload };
-        delete doc.id;
-        doc.lastUpdated = new Date().toISOString();
-
-        await db.collection('projects').doc(id).set(doc, { merge: true });
-        console.info(`[webhook] Updated project "${id}" progress=${doc.progress} status=${doc.status}`);
-        return res.json({ ok: true, id });
-    } catch (err) {
-        console.error('/webhook/progress error', err);
-        return res.status(500).json({ error: 'server error' });
-    }
+// POST /api/projects — create (id in body)
+app.post('/api/projects', async (req, res) => {
+  try {
+    if (!req.body || !req.body.id) return res.status(400).json({ error: 'missing id' });
+    res.status(201).json(await upsert(String(req.body.id), req.body, false));
+  } catch (e) {
+    console.error('POST /api/projects', e);
+    res.status(500).json({ error: 'server error' });
+  }
 });
 
-// ─── 404 fallback ─────────────────────────────────────────────────────────────
-app.use((req, res) => res.status(404).json({ error: 'not found' }));
+// PUT /api/projects/:id — full replace (merge=false)
+app.put('/api/projects/:id', async (req, res) => {
+  try { res.json(await upsert(req.params.id, req.body || {}, false)); }
+  catch (e) { console.error('PUT', e); res.status(500).json({ error: 'server error' }); }
+});
 
-// ─── Start ─────────────────────────────────────────────────────────────────────
+// PATCH /api/projects/:id — partial update (merge=true) — used by admin UI
+app.patch('/api/projects/:id', async (req, res) => {
+  try { res.json(await upsert(req.params.id, req.body || {}, true)); }
+  catch (e) { console.error('PATCH', e); res.status(500).json({ error: 'server error' }); }
+});
+
+// ─── Webhook for automated progress updates ──────────────────────────────────
+app.post('/webhook/progress', async (req, res) => {
+  try {
+    const secret = process.env.WEBHOOK_SECRET || '';
+    const provided = req.get('x-webhook-secret') || req.query.secret || '';
+    if (!secret) {
+      return res.status(503).json({ error: 'WEBHOOK_SECRET not configured on server' });
+    }
+    if (provided !== secret) return res.status(403).json({ error: 'forbidden' });
+    if (!req.body || !req.body.id) return res.status(400).json({ error: 'missing id' });
+    const result = await upsert(String(req.body.id), req.body, true);
+    console.info(`[webhook] ${req.body.id} → progress=${req.body.progress ?? '—'} status=${req.body.status ?? '—'}`);
+    res.json(result);
+  } catch (e) {
+    console.error('/webhook/progress', e);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
+// ─── 404 ──────────────────────────────────────────────────────────────────────
+app.use((_req, res) => res.status(404).json({ error: 'not found' }));
+
+// ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`[server] Listening on port ${PORT}`);
-    console.log(`[server] Firebase Admin: ${db ? 'ENABLED' : 'DISABLED (check FIREBASE_SA_JSON)'}`);
+  console.log(`[4u] listening on :${PORT}`);
+  console.log(`[4u] store = ${db ? 'firestore' : 'in-memory (dev)'}`);
+  console.log(`[4u] open http://localhost:${PORT}/`);
 });
 
 module.exports = app;

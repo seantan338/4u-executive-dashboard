@@ -1,0 +1,6 @@
+{
+  "buildType": "nodejs",
+  "installCommand": "npm install",
+  "startCommand": "npm start",
+  "port": 3000
+}
