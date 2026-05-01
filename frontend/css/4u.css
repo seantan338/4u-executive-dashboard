@@ -5,19 +5,34 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
 
 :root {
-  /* Palette */
-  --ink:        #0b0c0e;         /* deepest background */
-  --paper:      #111315;         /* card / panel */
-  --paper-2:    #191b1e;         /* elevated panel */
-  --rule:       #2a2d31;         /* hairline borders */
-  --rule-strong:#3a3e44;
-  --text:       #eceae4;         /* primary text */
-  --text-dim:   #9a978e;         /* secondary */
-  --text-mute:  #6b6962;         /* tertiary */
+  /* Palette — warm graphite (eye-friendly) + Sunrise Recruit brand triad.
+     Surfaces lifted from near-black to a warm L*≈12 baseline to reduce blue-cast
+     fatigue during long viewing. Accents pulled from the company logomark
+     (sun-red → amber → gold → yellow). */
 
-  --amber:      #e8a24b;         /* primary accent */
-  --amber-hi:   #f4c380;
-  --amber-lo:   #8a5f24;
+  /* Surfaces */
+  --ink:        #1a1814;         /* deepest background — warm graphite */
+  --paper:      #221f1a;         /* card / panel */
+  --paper-2:    #2c2922;         /* elevated panel */
+  --rule:       #3a3631;         /* hairline borders */
+  --rule-strong:#4a463f;
+
+  /* Text — off-bone, slightly warm to harmonize with surfaces */
+  --text:       #e8e2d4;         /* primary text */
+  --text-dim:   #a8a294;         /* secondary */
+  --text-mute:  #7a7568;         /* tertiary */
+
+  /* Sunrise Recruit brand triad (logomark colors, exposed as tokens) */
+  --sr-red:     #e63a2e;         /* sun disc */
+  --sr-amber:   #d4a23a;         /* upper band */
+  --sr-gold:    #f0c93a;         /* middle band */
+  --sr-yellow:  #ffe23a;         /* lower band */
+
+  /* Primary accent maps to the brand amber for backwards compatibility,
+     but readouts now reach for sr-gold / sr-red where appropriate. */
+  --amber:      #d4a23a;
+  --amber-hi:   #f0c93a;
+  --amber-lo:   #8a6a24;
 
   --ok:         #7fb069;
   --warn:       #e8a24b;
@@ -56,11 +71,12 @@ html, body {
 body {
   background-image:
     /* subtle grain */
-    radial-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-    /* warm vignette from top-left */
-    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(232,162,75,0.06), transparent 60%),
-    linear-gradient(180deg, #0b0c0e 0%, #0b0c0e 100%);
-  background-size: 3px 3px, auto, auto;
+    radial-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    /* warm sunrise vignette from top-left, biased red→amber to reflect the brand */
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(230,58,46,0.05), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 95% 0%, rgba(240,201,58,0.04), transparent 55%),
+    linear-gradient(180deg, #1a1814 0%, #1a1814 100%);
+  background-size: 3px 3px, auto, auto, auto;
 }
 
 /* ----- Typography ---------------------------------------------------------- */
@@ -124,9 +140,9 @@ hr {
   letter-spacing: -0.02em;
 }
 .masthead .logomark .dot {
-  width: 10px; height: 10px; border-radius: 50%;
-  background: var(--amber);
-  box-shadow: 0 0 14px var(--amber);
+  width: 12px; height: 12px; border-radius: 50%;
+  background: linear-gradient(180deg, var(--sr-red) 0%, var(--sr-red) 50%, var(--sr-amber) 50%, var(--sr-amber) 65%, var(--sr-gold) 65%, var(--sr-gold) 80%, var(--sr-yellow) 80%);
+  box-shadow: 0 0 14px rgba(230,58,46,0.5);
 }
 .masthead .title-block .edition {
   font-family: 'JetBrains Mono', monospace;
@@ -314,7 +330,7 @@ hr {
 }
 .prog .fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--amber-lo), var(--amber));
+  background: linear-gradient(90deg, var(--sr-red), var(--sr-amber) 50%, var(--sr-gold));
   transition: width .6s cubic-bezier(.2,.8,.2,1);
 }
 .prog.tall { height: 8px; }
